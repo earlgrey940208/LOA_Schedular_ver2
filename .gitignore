@@ -1,0 +1,54 @@
+# Dependencies
+front_end/node_modules/
+front_end/.DS_Store
+front_end/dist/
+
+# Logs
+front_end/npm-debug.log*
+front_end/yarn-debug.log*
+front_end/yarn-error.log*
+
+# Runtime data
+front_end/pids
+front_end/*.pid
+front_end/*.seed
+front_end/*.pid.lock
+
+# Coverage directory used by tools like istanbul
+front_end/coverage/
+
+# Dependency directories
+front_end/node_modules/
+front_end/jspm_packages/
+
+# Optional npm cache directory
+front_end/.npm
+
+# Optional eslint cache
+front_end/.eslintcache
+
+# Output of 'npm pack'
+front_end/*.tgz
+
+# Yarn Integrity file
+front_end/.yarn-integrity
+
+# dotenv environment variables file
+front_end/.env
+front_end/.env.local
+front_end/.env.development.local
+front_end/.env.test.local
+front_end/.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PowerPoint temp files
+~$*.pptx
