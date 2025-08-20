@@ -1,11 +1,12 @@
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, reactive, nextTick } from 'vue'
 
 // 샘플 데이터
 const raids = ['베히모스', '하기르', '노브', '노르둠']
 const parties = ['1파티', '2파티', '3파티', '4파티', '5파티', '6파티']
 
-const characters = {
+// reactive로 감싸서 반응형으로 만들기
+const characters = reactive({
   '비내': [
     { name: '비내', isSupporter: false, userId: 'user1' },
     { name: '메딕', isSupporter: true, userId: 'user1' }
@@ -19,7 +20,7 @@ const characters = {
     { name: '포우', isSupporter: false, userId: 'user3' },
     { name: '포포', isSupporter: false, userId: 'user3' }
   ]
-}
+})
 
 // 유저별 색상
 const userColors = {
@@ -185,6 +186,16 @@ const cancelAddingCharacter = () => {
   editingUser.value = null
   newCharacterInput.value = ''
 }
+
+// 캐릭터 삭제 함수 - 더 안전한 방식으로 수정
+const deleteCharacter = (userName, characterName) => {
+  const userCharacters = characters[userName]
+  const characterIndex = userCharacters.findIndex(char => char.name === characterName)
+  if (characterIndex !== -1) {
+    // 배열에서 해당 요소 제거
+    userCharacters.splice(characterIndex, 1)
+  }
+}
 </script>
 
 <template>
@@ -258,6 +269,14 @@ const cancelAddingCharacter = () => {
                       @dragstart="onDragStart(character)"
                     >
                       {{ character.name }}
+                      <!-- x 버튼 추가 -->
+                      <button 
+                        class="delete-btn"
+                        @click="deleteCharacter(userName, character.name)"
+                        @click.stop
+                      >
+                        ×
+                      </button>
                     </span>
                     
                     <!-- 새 캐릭터 입력 -->
@@ -437,6 +456,7 @@ const cancelAddingCharacter = () => {
   cursor: grab;
   transition: transform 0.2s;
   user-select: none;
+  position: relative; /* x 버튼 위치를 위해 필요 */
 }
 
 .character-tag:active {
@@ -455,11 +475,66 @@ const cancelAddingCharacter = () => {
   opacity: 0.5;
   cursor: not-allowed;
   filter: grayscale(100%);
-  pointer-events: none;
+  /* pointer-events: none; 제거 - x 버튼이 작동하도록 */
 }
 
 .character-tag.disabled:hover {
   transform: none;
+}
+
+/* disabled 상태에서는 드래그만 비활성화 */
+.character-tag.disabled {
+  pointer-events: auto; /* 전체 이벤트는 허용 */
+}
+
+.character-tag.disabled:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* 드래그 이벤트만 차단 */
+}
+
+/* x 버튼 스타일 */
+.delete-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: rgba(220, 53, 69, 0.9);
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 10; /* 다른 요소 위에 표시 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* 캐릭터 태그 호버 시 x 버튼 표시 */
+.character-tag:hover .delete-btn {
+  opacity: 1;
+}
+
+/* x 버튼 자체 호버 효과 */
+.delete-btn:hover {
+  background-color: rgba(220, 53, 69, 1);
+  transform: scale(1.1);
+}
+
+/* disabled 상태에서도 x 버튼은 작동하도록 */
+.character-tag.disabled:hover .delete-btn {
+  opacity: 1;
 }
 
 .add-btn {
