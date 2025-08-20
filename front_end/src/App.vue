@@ -42,7 +42,7 @@ const dragState = ref({
   sourceIndex: null
 })
 
-// 드래그 시작
+// 드래그 시작 - 원래대로 복원
 const onDragStart = (character) => {
   draggedCharacter.value = character
   dragState.value = { type: 'character', data: character }
@@ -453,8 +453,8 @@ const deleteRaid = (raidName) => {
                         disabled: isCharacterMaxed(character.name),
                         'drag-target': true
                       }"
-                      draggable="true"
-                      @dragstart="handleCharacterDragStart($event, character, userName, index)"
+                      :draggable="!isCharacterMaxed(character.name)"
+                      @dragstart="!isCharacterMaxed(character.name) ? onDragStart(character) : onCharacterOrderDragStart($event, character, userName, index)"
                       @dragover="onDragOver"
                       @drop="onCharacterOrderDrop($event, userName, index)"
                       @dragenter="onDragOver"
