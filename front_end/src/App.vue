@@ -1,23 +1,23 @@
 <script setup>
-import { ref, reactive, nextTick } from 'vue'
+import { ref, reactive, nextTick, onMounted } from 'vue'
 
-// 샘플 데이터 - raids를 reactive로 변경
-const raids = ref(['베히모스', '하기르', '노브', '노르둠'])
+// 샘플 데이터 - raids를 빈 배열로 초기화
+const raids = ref([])
 const parties = ref(['1파티', '2파티', '3파티', '4파티', '5파티', '6파티'])
 
 // reactive로 감싸서 반응형으로 만들기
 const characters = reactive({
   '비내': [
-    { name: '비내', isSupporter: false, userId: 'user1' },
+    { name: 'ㅁㅁㅁ', isSupporter: false, userId: 'user1' },
     { name: '메딕', isSupporter: true, userId: 'user1' }
   ],
   '샷건': [
-    { name: '샷건', isSupporter: false, userId: 'user2' },
+    { name: '샷ㅇㅇ건', isSupporter: false, userId: 'user2' },
     { name: '마리', isSupporter: false, userId: 'user2' },
     { name: '붓먹', isSupporter: true, userId: 'user2' }
   ],
   '도당': [
-    { name: '포우', isSupporter: false, userId: 'user3' },
+    { name: '포ㅅㅅ우', isSupporter: false, userId: 'user3' },
     { name: '포포', isSupporter: false, userId: 'user3' }
   ]
 })
@@ -336,6 +336,31 @@ const deleteRaid = (raidName) => {
     })
   }
 }
+
+// API 호출 함수
+const getAllRaids = async () => {
+  try {
+    const response = await fetch('http://localhost:8080/api/Raid')
+    if (response.ok) {
+      const raidsData = await response.json()
+      // API에서 받은 데이터의 name 필드만 추출하여 raids 배열에 저장
+      raids.value = raidsData.map(raid => raid.name)
+    } else {
+      console.error('Failed to fetch raids:', response.status)
+      // API 호출 실패 시 기본값으로 설정
+      raids.value = ['베히모스', '하기르', '노브', '노르둠']
+    }
+  } catch (error) {
+    console.error('Error fetching raids:', error)
+    // 에러 발생 시 기본값으로 설정
+    raids.value = ['베히모스', '하기르', '노브', '노르둠']
+  }
+}
+
+// 컴포넌트가 마운트될 때 레이드 데이터 가져오기
+onMounted(() => {
+  getAllRaids()
+})
 </script>
 
 <template>

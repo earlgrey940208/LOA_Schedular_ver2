@@ -1,54 +1,68 @@
 # Dependencies
 front_end/node_modules/
-front_end/.DS_Store
+front_end/.DS_Storeles/
+front_end/dist/tore
 front_end/dist/
-
 # Logs
 front_end/npm-debug.log*
 front_end/yarn-debug.log*
 front_end/yarn-error.log*
-
+front_end/yarn-error.log*
 # Runtime data
 front_end/pids
 front_end/*.pid
 front_end/*.seed
 front_end/*.pid.lock
-
+front_end/*.pid.lock
 # Coverage directory used by tools like istanbul
+front_end/coverage/y used by tools like istanbul
 front_end/coverage/
-
 # Dependency directories
-front_end/node_modules/
+front_end/node_modules/s
 front_end/jspm_packages/
-
+front_end/jspm_packages/
 # Optional npm cache directory
+front_end/.npm cache directory
 front_end/.npm
-
 # Optional eslint cache
+front_end/.eslintcachee
 front_end/.eslintcache
-
 # Output of 'npm pack'
+front_end/*.tgzm pack'
 front_end/*.tgz
-
 # Yarn Integrity file
 front_end/.yarn-integrity
-
+front_end/.yarn-integrity
 # dotenv environment variables file
-front_end/.env
+front_end/.envonment variables file
 front_end/.env.local
 front_end/.env.development.local
-front_end/.env.test.local
+front_end/.env.test.localt.local
 front_end/.env.production.local
-
+front_end/.env.production.local
 # IDE
 .vscode/
-.idea/
-*.swp
+.idea/e/
+*.swp/
 *.swo
-
+*.swo
 # OS
 .DS_Store
 Thumbs.db
-
+Thumbs.db
 # PowerPoint temp files
+~$*.pptxoint temp files
 ~$*.pptx
+
+
+
+
+
+
+
+
+
+
+
+
+back_end/.DS_Storeback_end/*.warback_end/*.jarback_end/target/back_end/out/back_end/gradlew.batback_end/gradlewback_end/gradle/back_end/.gradle/back_end/build/# Spring Boot Backend
