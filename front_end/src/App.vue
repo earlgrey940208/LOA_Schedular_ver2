@@ -1,5 +1,9 @@
 <script setup>
 import { ref, reactive, nextTick, onMounted } from 'vue'
+import { useApi } from '@/composables/useApi'
+
+// useApi composable 사용
+const { loadRaids, loadCharacters, loadSchedules, loadAllData, isLoading, error } = useApi()
 
 // 샘플 데이터 - raids를 빈 배열로 초기화
 const raids = ref([])
@@ -28,73 +32,24 @@ const dragState = ref({
   sourceIndex: null
 })
 
-// API 호출 함수들
-const getAllRaids = async () => {
+// 데이터 로드 함수들
+const loadData = async () => {
   try {
-    console.log('API 호출 시작: http://localhost:8080/api/Raid')
-    const response = await fetch('http://localhost:8080/api/Raid')
-    console.log('응답 상태:', response.status)
+    const raidsData = await loadRaids()
+    raids.value = raidsData
     
-    if (response.ok) {
-      const raidsData = await response.json()
-      console.log('받은 레이드 데이터:', raidsData)
-      raids.value = raidsData.map(raid => raid.name)
-    } else {
-      console.error('Failed to fetch raids:', response.status)
-      raids.value = ['베히모스', '하기르', '노브', '노르둠']
-    }
-  } catch (error) {
-    console.error('Error fetching raids:', error)
-    raids.value = ['베히모스', '하기르', '노브', '노르둠']
-  }
-}
-
-const getAllCharactors = async () => {
-  try {
-    console.log('API 호출 시작: http://localhost:8080/api/charactors')
-    const response = await fetch('http://localhost:8080/api/charactors')
-    console.log('캐릭터 응답 상태:', response.status)
+    const charactersData = await loadCharacters()
+    // reactive 객체에 데이터 할당
+    Object.keys(characters).forEach(key => {
+      delete characters[key]
+    })
+    Object.keys(charactersData).forEach(userId => {
+      characters[userId] = charactersData[userId]
+    })
     
-    if (response.ok) {
-      const charactorsData = await response.json()
-      console.log('받은 캐릭터 데이터:', charactorsData)
-      
-      // 캐릭터 데이터를 user_id별로 그룹화
-      const groupedCharacters = {}
-      
-      charactorsData.forEach(charactor => {
-        const userId = charactor.userId
-        
-        // user_id별로 그룹이 없으면 생성
-        if (!groupedCharacters[userId]) {
-          groupedCharacters[userId] = []
-        }
-        
-        // 캐릭터 객체 생성
-        const characterObj = {
-          name: charactor.name,
-          isSupporter: charactor.isSupporter === 'Y',
-          userId: charactor.userId
-        }
-        
-        groupedCharacters[userId].push(characterObj)
-      })
-      
-      // reactive 객체에 데이터 할당
-      Object.keys(groupedCharacters).forEach(userId => {
-        characters[userId] = groupedCharacters[userId]
-      })
-      
-      console.log('처리된 캐릭터 데이터:', characters)
-      
-    } else {
-      console.error('Failed to fetch charactors:', response.status)
-      // API 호출 실패 시 기본값으로 설정
-      setDefaultCharacters()
-    }
+    console.log('데이터 로드 완료:', { raids: raids.value, characters })
   } catch (error) {
-    console.error('Error fetching charactors:', error)
-    // 에러 발생 시 기본값으로 설정
+    console.error('데이터 로드 실패:', error)
     setDefaultCharacters()
   }
 }
@@ -124,8 +79,7 @@ const setDefaultCharacters = () => {
 
 // 컴포넌트가 마운트될 때 데이터 가져오기
 onMounted(async () => {
-  await getAllRaids()
-  await getAllCharactors()
+  await loadData()
 })
 
 // 드래그 시작 - 원래대로 복원
@@ -426,6 +380,19 @@ const deleteRaid = (raidName) => {
 
 <template>
   <div class="app">
+    <!-- 로딩 상태 표시 -->
+    <div v-if="isLoading" class="loading-overlay">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>데이터를 불러오는 중...</p>
+      </div>
+    </div>
+
+    <!-- 에러 상태 표시 -->
+    <div v-if="error" class="error-message">
+      <p>⚠️ {{ error }}</p>
+    </div>
+
     <!-- 헤더 -->
     <header class="header">
       <h1>로스트아크 스케줄러</h1>
@@ -1040,5 +1007,65 @@ const deleteRaid = (raidName) => {
 .character-tag.disabled:hover {
   transform: scale(1.05);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 로딩 오버레이 스타일 */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  max-width: 300px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner p {
+  margin: 0;
+  color: #666;
+  font-size: 1rem;
+}
+
+/* 에러 메시지 스타일 */
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  margin: 1rem;
+  border-radius: 8px;
+  border: 1px solid #f5c6cb;
+  text-align: center;
+}
+
+.error-message p {
+  margin: 0;
+  font-weight: 500;
 }
 </style>
