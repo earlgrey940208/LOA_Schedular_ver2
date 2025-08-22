@@ -5,28 +5,14 @@ import { ref, reactive, nextTick, onMounted } from 'vue'
 const raids = ref([])
 const parties = ref(['1파티', '2파티', '3파티', '4파티', '5파티', '6파티'])
 
-// reactive로 감싸서 반응형으로 만들기
-const characters = reactive({
-  '비내': [
-    { name: 'ㅁㅁㅁ', isSupporter: false, userId: 'user1' },
-    { name: '메딕', isSupporter: true, userId: 'user1' }
-  ],
-  '샷건': [
-    { name: '샷ㅇㅇ건', isSupporter: false, userId: 'user2' },
-    { name: '마리', isSupporter: false, userId: 'user2' },
-    { name: '붓먹', isSupporter: true, userId: 'user2' }
-  ],
-  '도당': [
-    { name: '포ㅅㅅ우', isSupporter: false, userId: 'user3' },
-    { name: '포포', isSupporter: false, userId: 'user3' }
-  ]
-})
+// reactive로 감싸서 반응형으로 만들기 - 초기값을 빈 객체로 설정
+const characters = reactive({})
 
 // 유저별 색상
 const userColors = {
-  'user1': '#9d4edd',
-  'user2': '#f4d03f',
-  'user3': '#85c1e9'
+  '혀니': '#9d4edd',
+  '샷건': '#f4d03f',
+  '도당': '#85c1e9'
 }
 
 // 스케줄 데이터 (파티별, 레이드별로 배치된 캐릭터들)
@@ -40,6 +26,106 @@ const dragState = ref({
   type: null, // 'character', 'raid', 'party', 'character-order'
   data: null,
   sourceIndex: null
+})
+
+// API 호출 함수들
+const getAllRaids = async () => {
+  try {
+    console.log('API 호출 시작: http://localhost:8080/api/Raid')
+    const response = await fetch('http://localhost:8080/api/Raid')
+    console.log('응답 상태:', response.status)
+    
+    if (response.ok) {
+      const raidsData = await response.json()
+      console.log('받은 레이드 데이터:', raidsData)
+      raids.value = raidsData.map(raid => raid.name)
+    } else {
+      console.error('Failed to fetch raids:', response.status)
+      raids.value = ['베히모스', '하기르', '노브', '노르둠']
+    }
+  } catch (error) {
+    console.error('Error fetching raids:', error)
+    raids.value = ['베히모스', '하기르', '노브', '노르둠']
+  }
+}
+
+const getAllCharactors = async () => {
+  try {
+    console.log('API 호출 시작: http://localhost:8080/api/charactors')
+    const response = await fetch('http://localhost:8080/api/charactors')
+    console.log('캐릭터 응답 상태:', response.status)
+    
+    if (response.ok) {
+      const charactorsData = await response.json()
+      console.log('받은 캐릭터 데이터:', charactorsData)
+      
+      // 캐릭터 데이터를 user_id별로 그룹화
+      const groupedCharacters = {}
+      
+      charactorsData.forEach(charactor => {
+        const userId = charactor.userId
+        
+        // user_id별로 그룹이 없으면 생성
+        if (!groupedCharacters[userId]) {
+          groupedCharacters[userId] = []
+        }
+        
+        // 캐릭터 객체 생성
+        const characterObj = {
+          name: charactor.name,
+          isSupporter: charactor.isSupporter === 'Y',
+          userId: charactor.userId
+        }
+        
+        groupedCharacters[userId].push(characterObj)
+      })
+      
+      // reactive 객체에 데이터 할당
+      Object.keys(groupedCharacters).forEach(userId => {
+        characters[userId] = groupedCharacters[userId]
+      })
+      
+      console.log('처리된 캐릭터 데이터:', characters)
+      
+    } else {
+      console.error('Failed to fetch charactors:', response.status)
+      // API 호출 실패 시 기본값으로 설정
+      setDefaultCharacters()
+    }
+  } catch (error) {
+    console.error('Error fetching charactors:', error)
+    // 에러 발생 시 기본값으로 설정
+    setDefaultCharacters()
+  }
+}
+
+// 기본 캐릭터 데이터 설정 함수
+const setDefaultCharacters = () => {
+  // 기존 characters 객체 초기화
+  Object.keys(characters).forEach(key => {
+    delete characters[key]
+  })
+  
+  // 기본값 설정
+  characters['혀니'] = [
+    { name: '비내', isSupporter: false, userId: '혀니' },
+    { name: '메딕', isSupporter: true, userId: '혀니' }
+  ]
+  characters['샷건'] = [
+    { name: '샷건', isSupporter: false, userId: '샷건' },
+    { name: '마리', isSupporter: false, userId: '샷건' },
+    { name: '붓먹', isSupporter: true, userId: '샷건' }
+  ]
+  characters['도당'] = [
+    { name: '포우', isSupporter: false, userId: '도당' },
+    { name: '포포', isSupporter: false, userId: '도당' }
+  ]
+}
+
+// 컴포넌트가 마운트될 때 데이터 가져오기
+onMounted(async () => {
+  await getAllRaids()
+  await getAllCharactors()
 })
 
 // 드래그 시작 - 원래대로 복원
@@ -336,31 +422,6 @@ const deleteRaid = (raidName) => {
     })
   }
 }
-
-// API 호출 함수
-const getAllRaids = async () => {
-  try {
-    const response = await fetch('http://localhost:8080/api/Raid')
-    if (response.ok) {
-      const raidsData = await response.json()
-      // API에서 받은 데이터의 name 필드만 추출하여 raids 배열에 저장
-      raids.value = raidsData.map(raid => raid.name)
-    } else {
-      console.error('Failed to fetch raids:', response.status)
-      // API 호출 실패 시 기본값으로 설정
-      raids.value = ['베히모스', '하기르', '노브', '노르둠']
-    }
-  } catch (error) {
-    console.error('Error fetching raids:', error)
-    // 에러 발생 시 기본값으로 설정
-    raids.value = ['베히모스', '하기르', '노브', '노르둠']
-  }
-}
-
-// 컴포넌트가 마운트될 때 레이드 데이터 가져오기
-onMounted(() => {
-  getAllRaids()
-})
 </script>
 
 <template>

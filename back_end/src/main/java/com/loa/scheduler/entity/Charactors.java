@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 @Entity
-@Table(name = "Charactors")
+@Table(name = "charactors")
 public class Charactors {
     
     @Id
@@ -18,7 +18,7 @@ public class Charactors {
     
     @NotNull(message = "서포터 여부는 필수입니다")
     @Column(nullable = false)
-    private Boolean isSupporter;
+    private String isSupporter;
     
     @NotBlank(message = "사용자 ID는 필수입니다")
     @Column(nullable = false)
@@ -28,7 +28,7 @@ public class Charactors {
     public Charactors() {}
     
     // 생성자
-    public Charactors(String name, Boolean isSupporter, String userId) {
+    public Charactors(String name, String isSupporter, String userId) {
         this.name = name;
         this.isSupporter = isSupporter;
         this.userId = userId;
@@ -41,8 +41,8 @@ public class Charactors {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     
-    public Boolean getIsSupporter() { return isSupporter; }
-    public void setIsSupporter(Boolean isSupporter) { this.isSupporter = isSupporter; }
+    public String getIsSupporter() { return isSupporter; }
+    public void setIsSupporter(String isSupporter) { this.isSupporter = isSupporter; }
     
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
