@@ -68,17 +68,69 @@ npm start
 브라우저에서 `http://localhost:5174/` 접속
 
 ## 프로젝트 구조
+
+### Frontend (Vue.js)
 ```
-로스트아크 스케줄러ver_2/
-├── front_end/          # Vue.js 프론트엔드
-│   ├── src/
-│   │   ├── App.vue     # 메인 컴포넌트
-│   │   └── main.js     # 엔트리 포인트
-│   ├── package.json
-│   └── vite.config.js
-├── 로스트아크 스케줄러 기획서.pptx
-├── 로스트아크 스케줄러 셀프피드백.pptx
-└── README.md
+front_end/
+├── src/
+│   ├── components/
+│   │   ├── AppHeader.vue              # 헤더 컴포넌트
+│   │   ├── ScheduleSection.vue        # 스케줄 관리 (모든 로직 포함)
+│   │   ├── CharacterSection.vue       # 캐릭터 관리 (모든 로직 포함)
+│   │   └── ui/
+│   │       ├── LoadingSpinner.vue     # 로딩 스피너
+│   │       └── ErrorMessage.vue       # 에러 메시지
+│   ├── composables/
+│   │   ├── useApi.js                  # API 관련 로직
+│   │   └── useDragDrop.js            # 드래그앤드롭 로직
+│   ├── services/
+│   │   └── api.js                    # API 서비스 (raidApi, characterApi, scheduleApi)
+│   ├── utils/
+│   │   └── constants.js              # 상수들 (userColors, defaultData 등)
+│   ├── App.vue                       # 메인 조합 컴포넌트 (173줄)
+│   └── main.js                       # 엔트리 포인트
+├── package.json
+└── vite.config.js
+```
+
+### Backend (Spring Boot)
+```
+back_end/
+├── src/
+│   └── main/
+│       ├── java/com/loa/scheduler/
+│       │   ├── SchedulerApplication.java
+│       │   ├── controller/            # REST API 컨트롤러
+│       │   ├── entity/               # JPA 엔티티 (Charactors, Raid, Schedule)
+│       │   └── repository/           # JPA 리포지토리
+│       └── resources/
+│           └── application.properties # DB 연결 설정
+├── docker-compose.yml               # MariaDB 컨테이너 설정
+└── build.gradle
+```
+
+### 아키텍처 특징
+- **컴포넌트 기반**: 기능별로 적절히 분리된 Vue 컴포넌트
+- **중앙집중식 API**: services/api.js에서 모든 API 관리
+- **재사용 가능한 로직**: composables로 드래그앤드롭, API 로직 분리
+- **상수 관리**: utils/constants.js에서 색상, 기본값 등 관리
+- **RESTful API**: Spring Boot로 구현된 백엔드 API
+
+## 개발 워크플로우
+
+### 데이터베이스 설정
+```bash
+# MariaDB 컨테이너 시작
+cd back_end && docker-compose up -d
+```
+
+### 서비스 실행
+```bash
+# Frontend (port 5174)
+cd front_end && npm start
+
+# Backend (port 8080) 
+cd back_end && ./gradlew bootRun
 ```
 
 ## 향후 계획
