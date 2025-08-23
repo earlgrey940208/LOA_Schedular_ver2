@@ -29,6 +29,13 @@ public class RaidController {
         if (raidRepository.existsByName(raid.getName())) {
             return ResponseEntity.badRequest().build();
         }
+        
+        // seq가 설정되지 않은 경우 자동으로 최대값 + 1로 설정
+        if (raid.getSeq() == null) {
+            Long maxSeq = raidRepository.findMaxSeq();
+            raid.setSeq(maxSeq + 1);
+        }
+        
         Raid savedRaid = raidRepository.save(raid);
         return ResponseEntity.ok(savedRaid);
     }

@@ -27,11 +27,18 @@ const emit = defineEmits(['add-character', 'delete-character', 'update:newCharac
 
 // useDragDrop composable 사용
 const {
-  onCharacterDragStart,
+  onCharacterDragStart: originalOnCharacterDragStart,
   onCharacterOrderDragStart,
   onDragOver,
   onCharacterOrderDrop
 } = useDragDrop()
+
+// 캐릭터 드래그 시작 디버깅
+const onCharacterDragStart = (character) => {
+  console.log('캐릭터 드래그 시작:', character)
+  console.log('캐릭터 최대 레이드 도달 여부:', props.isCharacterMaxed(character.name))
+  return originalOnCharacterDragStart(character)
+}
 
 // 캐릭터 추가 관련 상태
 const newCharacterInput = ref('')

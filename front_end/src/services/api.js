@@ -45,8 +45,10 @@ export const raidApi = {
   },
 
   // 레이드 생성
-  createRaid: async (raidData) => {
+  createRaid: async (raidName) => {
     try {
+      // seq는 백엔드에서 자동 설정되도록 name만 전송
+      const raidData = { name: raidName }
       const response = await fetch(`${API_BASE_URL}/raid`, {
         ...fetchConfig,
         method: 'POST',
@@ -59,10 +61,25 @@ export const raidApi = {
     }
   },
 
-  // 레이드 삭제
-  deleteRaid: async (raidId) => {
+  // 레이드 생성 (seq 지정)
+  createRaidWithSeq: async (raidData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/raid/${raidId}`, {
+      const response = await fetch(`${API_BASE_URL}/raid`, {
+        ...fetchConfig,
+        method: 'POST',
+        body: JSON.stringify(raidData)
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error creating raid with seq:', error)
+      throw error
+    }
+  },
+
+  // 레이드 삭제
+  deleteRaid: async (raidName) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/raid/${encodeURIComponent(raidName)}`, {
         ...fetchConfig,
         method: 'DELETE'
       })

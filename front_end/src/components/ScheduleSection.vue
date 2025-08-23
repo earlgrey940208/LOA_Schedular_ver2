@@ -29,9 +29,16 @@ const {
   onPartyDragStart,
   onDragOver,
   onPartyDrop,
-  onScheduleDrop,
+  onScheduleDrop: originalOnScheduleDrop,
   onRightClick
 } = useDragDrop()
+
+// 스케줄 드롭 디버깅
+const onScheduleDrop = (event, party, raid, schedules, getCharacterRaids) => {
+  console.log('스케줄 드롭 이벤트:', { party, raid })
+  console.log('현재 스케줄:', schedules)
+  return originalOnScheduleDrop(event, party, raid, schedules, getCharacterRaids)
+}
 
 // 레이드 드래그 관련 상태
 const draggedRaid = ref(null)

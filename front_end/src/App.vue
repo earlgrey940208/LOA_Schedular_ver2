@@ -7,6 +7,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorMessage from '@/components/ui/ErrorMessage.vue'
 import { raidApi, characterApi } from '@/services/api'
 import { defaultParties, defaultCharacters, defaultRaids } from '@/utils/constants'
+import { useDragDrop } from '@/composables/useDragDrop'
 
 // API 로딩 및 에러 상태 (로컬에서 관리)
 const isLoading = ref(false)
@@ -23,15 +24,34 @@ const newCharacters = ref([]) // 새로 추가된 캐릭터들
 const deletedCharacters = ref([]) // 삭제할 캐릭터 목록
 const modifiedCharacters = ref([]) // 수정된 캐릭터들 (나중에 필요시)
 const raidOrderChanges = ref([]) // 레이드 순서 변경 목록
+const newRaids = ref([]) // 새로 추가된 레이드들
+const deletedRaids = ref([]) // 삭제할 레이드 목록
 
 // 변경사항이 있는지 확인하는 computed
 const hasChanges = computed(() => {
-  return newCharacters.value.length > 0 || deletedCharacters.value.length > 0 || raidOrderChanges.value.length > 0
+  return newCharacters.value.length > 0 || deletedCharacters.value.length > 0 || raidOrderChanges.value.length > 0 || newRaids.value.length > 0 || deletedRaids.value.length > 0
 })
 
 const totalChanges = computed(() => {
-  return newCharacters.value.length + deletedCharacters.value.length + raidOrderChanges.value.length
+  return newCharacters.value.length + deletedCharacters.value.length + raidOrderChanges.value.length + newRaids.value.length + deletedRaids.value.length
 })
+
+// 드래그&드롭 기능
+const {
+  draggedCharacter,
+  dragState,
+  onCharacterDragStart,
+  onRaidDragStart,
+  onPartyDragStart,
+  onCharacterOrderDragStart,
+  onDragOver,
+  onRaidDrop,
+  onPartyDrop,
+  onCharacterOrderDrop,
+  onScheduleDrop,
+  onRightClick,
+  resetDragState
+} = useDragDrop()
 
 // 데이터 로드 함수들
 const loadData = async () => {
@@ -100,14 +120,45 @@ const isCharacterMaxed = (characterName) => {
 
 // 레이드 관련 함수들
 const addRaid = (raidName) => {
-  if (raidName.trim() && !raids.value.includes(raidName)) {
-    raids.value.push(raidName.trim())
+  if (raidName.trim() && !raids.value.some(raid => raid.name === raidName)) {
+    // 현재 저장된 레이드들만 고려 (newRaids는 제외)
+    const savedRaids = raids.value.filter(raid => 
+      !newRaids.value.some(newRaid => newRaid.name === raid.name)
+    )
+    
+    const maxSeq = savedRaids.length > 0 
+      ? Math.max(...savedRaids.map(raid => raid.seq || 0))
+      : 0
+    
+    // 이미 추가된 새 레이드들의 개수를 고려
+    const newSeq = maxSeq + newRaids.value.length + 1
+    
+    const newRaid = {
+      name: raidName.trim(),
+      seq: newSeq
+    }
+    
+    // 화면에 즉시 추가
+    raids.value.push(newRaid)
+    
+    // 변경 추적에 추가
+    newRaids.value.push(newRaid)
+    
+    console.log('레이드 추가 완료:', newRaid)
+    console.log('현재 최대 seq (저장된):', maxSeq)
+    console.log('새 레이드 개수:', newRaids.value.length)
+    console.log('새 레이드 추적 목록:', newRaids.value)
+  } else {
+    console.warn('레이드 추가 실패 - 이미 존재하거나 빈 이름:', raidName)
   }
 }
 
 const deleteRaid = (raidName) => {
-  const raidIndex = raids.value.findIndex(raid => raid === raidName)
+  const raidIndex = raids.value.findIndex(raid => raid.name === raidName)
   if (raidIndex !== -1) {
+    const deletedRaid = raids.value[raidIndex]
+    
+    // 화면에서 즉시 삭제
     raids.value.splice(raidIndex, 1)
     
     // 해당 레이드와 관련된 스케줄도 모두 삭제
@@ -117,6 +168,23 @@ const deleteRaid = (raidName) => {
         delete schedules.value[key]
       }
     })
+    
+    // 변경 추적에 추가 (새로 추가된 레이드인지 확인)
+    const newRaidIndex = newRaids.value.findIndex(raid => raid.name === raidName)
+    if (newRaidIndex !== -1) {
+      // 새로 추가된 레이드를 삭제하는 경우 - newRaids에서만 제거
+      newRaids.value.splice(newRaidIndex, 1)
+      console.log('새 레이드 삭제 - 추적에서만 제거:', deletedRaid)
+    } else {
+      // 기존 레이드를 삭제하는 경우 - deletedRaids에 추가
+      deletedRaids.value.push(deletedRaid)
+      console.log('기존 레이드 삭제 - 삭제 목록에 추가:', deletedRaid)
+    }
+    
+    console.log('레이드 삭제 완료:', deletedRaid)
+    console.log('삭제된 레이드 추적 목록:', deletedRaids.value)
+  } else {
+    console.warn('삭제할 레이드를 찾을 수 없음:', raidName)
   }
 }
 
@@ -223,8 +291,6 @@ const swapRaidOrder = (fromIndex, toIndex) => {
       { name: raid2.name, seq: raid2.seq }
     )
   }
-  
-  console.log('레이드 순서 변경 완료:', raidOrderChanges.value)
 }
 
 // 저장 함수 - CharacterSection에 캐릭터 저장을 위임하는 방식
@@ -234,8 +300,6 @@ const saveAll = async () => {
   try {
     isLoading.value = true
     error.value = null
-    
-    console.log('전체 저장 시작...')
     
     let hasAnyChanges = false
     let savedItems = []
@@ -249,13 +313,62 @@ const saveAll = async () => {
       }
     }
     
-    // 2. 레이드 순서 저장
+    // 2. 레이드 추가/삭제 저장
+    if (newRaids.value.length > 0 || deletedRaids.value.length > 0) {
+      
+      // 새 레이드 추가 (seq 충돌 방지를 위해 미리 계산)
+      if (newRaids.value.length > 0) {
+        // 현재 저장된 레이드들만 고려 (newRaids는 제외)
+        const savedRaids = raids.value.filter(raid => 
+          !newRaids.value.some(newRaid => newRaid.name === raid.name)
+        )
+        
+        const currentMaxSeq = savedRaids.length > 0 
+          ? Math.max(...savedRaids.map(raid => raid.seq || 0))
+          : 0
+        
+        for (let i = 0; i < newRaids.value.length; i++) {
+          const raid = newRaids.value[i]
+          try {
+            // seq를 미리 계산해서 전송 (현재 최대값 + 인덱스 + 1)
+            const raidWithSeq = {
+              name: raid.name,
+              seq: currentMaxSeq + i + 1
+            }
+            await raidApi.createRaidWithSeq(raidWithSeq)
+          } catch (err) {
+            console.error('레이드 추가 실패:', raid.name, err)
+            throw new Error(`레이드 '${raid.name}' 추가에 실패했습니다`)
+          }
+        }
+      }
+      
+      // 레이드 삭제
+      for (const raid of deletedRaids.value) {
+        try {
+          await raidApi.deleteRaid(raid.name)
+        } catch (err) {
+          console.error('레이드 삭제 실패:', raid.name, err)
+          throw new Error(`레이드 '${raid.name}' 삭제에 실패했습니다`)
+        }
+      }
+      
+      // 변경 추적 초기화
+      newRaids.value = []
+      deletedRaids.value = []
+      
+      // 레이드 목록 다시 로드
+      await loadRaids()
+      
+      hasAnyChanges = true
+      savedItems.push('레이드')
+    }
+
+    // 3. 레이드 순서 저장
     if (raidOrderChanges.value.length > 0) {
-      console.log('레이드 순서 저장:', raidOrderChanges.value)
       try {
         await raidApi.updateRaidOrder(raidOrderChanges.value)
         raidOrderChanges.value = [] // 저장 후 초기화
-        console.log('레이드 순서 저장 완료')
         hasAnyChanges = true
         savedItems.push('레이드 순서')
       } catch (err) {
@@ -264,18 +377,13 @@ const saveAll = async () => {
       }
     }
     
-    // 3. TODO: 스케줄 저장 기능 (추후 구현)
-    if (Object.keys(schedules.value).length > 0) {
-      console.log('스케줄 저장은 추후 구현 예정:', schedules.value)
-    }
+    // 4. TODO: 스케줄 저장 기능 (추후 구현)
     
     // 결과 메시지 표시
     if (hasAnyChanges) {
       alert(`저장이 완료되었습니다!\n저장된 항목: ${savedItems.join(', ')}`)
-      console.log('전체 저장 완료!')
     } else {
       alert('저장할 변경사항이 없습니다.')
-      console.log('저장할 변경사항 없음')
     }
     
   } catch (error) {

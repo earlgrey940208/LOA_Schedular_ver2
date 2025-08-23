@@ -15,4 +15,8 @@ public interface RaidRepository extends JpaRepository<Raid, String> {
     // seq 순으로 정렬된 모든 레이드 조회
     @Query("SELECT r FROM Raid r ORDER BY r.seq ASC")
     List<Raid> findAllOrderBySeq();
+    
+    // 최대 seq 값 조회
+    @Query("SELECT COALESCE(MAX(r.seq), 0) FROM Raid r")
+    Long findMaxSeq();
 }
