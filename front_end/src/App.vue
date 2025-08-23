@@ -5,12 +5,12 @@ import ScheduleSection from '@/components/ScheduleSection.vue'
 import CharacterSection from '@/components/CharacterSection.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorMessage from '@/components/ui/ErrorMessage.vue'
-import { useApi } from '@/composables/useApi'
 import { raidApi, characterApi } from '@/services/api'
 import { defaultParties, defaultCharacters, defaultRaids } from '@/utils/constants'
 
-// API 로딩 및 에러 상태
-const { isLoading, error } = useApi()
+// API 로딩 및 에러 상태 (로컬에서 관리)
+const isLoading = ref(false)
+const error = ref(null)
 
 // 메인 데이터
 const raids = ref([])

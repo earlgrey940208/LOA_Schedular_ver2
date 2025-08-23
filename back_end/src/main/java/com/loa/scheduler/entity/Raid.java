@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 
 @Entity
-@Table(name = "Raid")
+@Table(name = "raid")
 public class Raid {
     
     @Id
