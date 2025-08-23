@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import ScheduleSection from '@/components/ScheduleSection.vue'
 import CharacterSection from '@/components/CharacterSection.vue'
@@ -22,6 +22,16 @@ const schedules = ref({})
 const newCharacters = ref([]) // 새로 추가된 캐릭터들
 const deletedCharacters = ref([]) // 삭제할 캐릭터 목록
 const modifiedCharacters = ref([]) // 수정된 캐릭터들 (나중에 필요시)
+const raidOrderChanges = ref([]) // 레이드 순서 변경 목록
+
+// 변경사항이 있는지 확인하는 computed
+const hasChanges = computed(() => {
+  return newCharacters.value.length > 0 || deletedCharacters.value.length > 0 || raidOrderChanges.value.length > 0
+})
+
+const totalChanges = computed(() => {
+  return newCharacters.value.length + deletedCharacters.value.length + raidOrderChanges.value.length
+})
 
 // 데이터 로드 함수들
 const loadData = async () => {
@@ -33,6 +43,7 @@ const loadData = async () => {
     newCharacters.value = []
     deletedCharacters.value = []
     modifiedCharacters.value = []
+    raidOrderChanges.value = []
     
     // 레이드 데이터 로드
     try {
@@ -145,6 +156,8 @@ const addCharacter = async (userName, characterName) => {
 }
 
 const deleteCharacter = (userName, characterName) => {
+  console.log(`=== 캐릭터 삭제 요청: ${characterName} (사용자: ${userName}) ===`)
+  
   const userCharacters = characters[userName]
   if (userCharacters) {
     const characterIndex = userCharacters.findIndex(char => char.name === characterName)
@@ -155,76 +168,114 @@ const deleteCharacter = (userName, characterName) => {
       if (newCharacterIndex !== -1) {
         // 새로 추가된 캐릭터라면 newCharacters 목록에서만 제거 (서버 삭제 불필요)
         newCharacters.value.splice(newCharacterIndex, 1)
-        console.log('새 캐릭터 삭제:', characterName, '(서버 삭제 불필요)')
+        console.log('✓ 새 캐릭터 삭제:', characterName, '(서버 삭제 불필요)')
+        console.log('현재 새 캐릭터 목록:', newCharacters.value.map(c => c.name))
       } else {
         // 기존 캐릭터라면 삭제 목록에 추가 (서버에서 삭제 필요)
-        deletedCharacters.value.push(characterName)
-        console.log('기존 캐릭터 삭제 예약:', characterName)
+        deletedCharacters.value.push(characterName) // 이름만 저장
+        console.log('✓ 기존 캐릭터 삭제 예약:', characterName)
+        console.log('현재 삭제 예정 목록:', deletedCharacters.value)
       }
       
       // 로컬 상태에서 제거
       userCharacters.splice(characterIndex, 1)
+      console.log('✓ 로컬 상태에서 제거 완료:', characterName)
+    } else {
+      console.warn('❌ 캐릭터를 찾을 수 없음:', characterName)
     }
+  } else {
+    console.warn('❌ 사용자를 찾을 수 없음:', userName)
   }
+  
+  console.log('=== 삭제 요청 처리 완료 ===')
 }
 
-// 저장 함수
+// 레이드 순서 변경 함수
+const swapRaidOrder = (fromIndex, toIndex) => {
+  if (fromIndex === toIndex) return
+  
+  // 로컬 배열에서 순서 변경
+  const raid1 = raids.value[fromIndex]
+  const raid2 = raids.value[toIndex]
+  
+  // seq 값 교환
+  const tempSeq = raid1.seq
+  raid1.seq = raid2.seq
+  raid2.seq = tempSeq
+  
+  // 배열 순서 변경
+  raids.value.splice(fromIndex, 1, raid2)
+  raids.value.splice(toIndex, 1, raid1)
+  
+  // 변경 사항 추적에 추가
+  const changeIndex = raidOrderChanges.value.findIndex(change => 
+    change.name === raid1.name || change.name === raid2.name
+  )
+  
+  if (changeIndex !== -1) {
+    // 기존 변경사항 업데이트
+    raidOrderChanges.value[changeIndex] = { name: raid1.name, seq: raid1.seq }
+    raidOrderChanges.value.push({ name: raid2.name, seq: raid2.seq })
+  } else {
+    // 새로운 변경사항 추가
+    raidOrderChanges.value.push(
+      { name: raid1.name, seq: raid1.seq },
+      { name: raid2.name, seq: raid2.seq }
+    )
+  }
+  
+  console.log('레이드 순서 변경 완료:', raidOrderChanges.value)
+}
+
+// 저장 함수 - CharacterSection에 캐릭터 저장을 위임하는 방식
+const characterSectionRef = ref(null)
+
 const saveAll = async () => {
   try {
     isLoading.value = true
     error.value = null
     
-    console.log('변경사항 저장 시작...')
-    console.log('새 캐릭터:', newCharacters.value.length, '개')
-    console.log('삭제할 캐릭터:', deletedCharacters.value.length, '개')
+    console.log('전체 저장 시작...')
     
-    // 1. 삭제된 캐릭터들 서버에서 삭제
-    if (deletedCharacters.value.length > 0) {
-      console.log('삭제할 캐릭터:', deletedCharacters.value)
-      for (const characterName of deletedCharacters.value) {
-        try {
-          await characterApi.deleteCharacter(characterName)
-          console.log('캐릭터 삭제 성공:', characterName)
-        } catch (err) {
-          console.warn('캐릭터 삭제 실패:', characterName, err)
-        }
+    let hasAnyChanges = false
+    let savedItems = []
+    
+    // 1. 캐릭터 저장 (CharacterSection에 위임)
+    if (characterSectionRef.value) {
+      const hasCharacterChanges = await characterSectionRef.value.saveCharacters()
+      if (hasCharacterChanges) {
+        hasAnyChanges = true
+        savedItems.push('캐릭터')
       }
     }
     
-    // 2. 새로 추가된 캐릭터들만 서버에 저장
-    if (newCharacters.value.length > 0) {
-      console.log('새 캐릭터 저장:', newCharacters.value)
-      for (const newCharacter of newCharacters.value) {
-        try {
-          const serverCharacterData = {
-            name: newCharacter.name,
-            isSupporter: newCharacter.isSupporter ? 'Y' : 'N',
-            userId: newCharacter.userId,
-            seq: newCharacter.seq
-          }
-          
-          await characterApi.createCharacter(serverCharacterData)
-          console.log('새 캐릭터 저장 성공:', newCharacter.name)
-        } catch (err) {
-          console.error('새 캐릭터 저장 실패:', newCharacter.name, err)
-          throw new Error(`캐릭터 "${newCharacter.name}" 저장에 실패했습니다`)
-        }
+    // 2. 레이드 순서 저장
+    if (raidOrderChanges.value.length > 0) {
+      console.log('레이드 순서 저장:', raidOrderChanges.value)
+      try {
+        await raidApi.updateRaidOrder(raidOrderChanges.value)
+        raidOrderChanges.value = [] // 저장 후 초기화
+        console.log('레이드 순서 저장 완료')
+        hasAnyChanges = true
+        savedItems.push('레이드 순서')
+      } catch (err) {
+        console.error('레이드 순서 저장 실패:', err)
+        throw new Error('레이드 순서 저장에 실패했습니다')
       }
     }
     
-    // 3. 성공 후 변경 추적 목록들 초기화
-    newCharacters.value = []
-    deletedCharacters.value = []
-    modifiedCharacters.value = []
+    // 3. TODO: 스케줄 저장 기능 (추후 구현)
+    if (Object.keys(schedules.value).length > 0) {
+      console.log('스케줄 저장은 추후 구현 예정:', schedules.value)
+    }
     
-    console.log('모든 변경사항 저장 완료!')
-    
-    // TODO: raids, schedules 저장 기능은 추후 구현
-    if (raids.value.length > 0 || Object.keys(schedules.value).length > 0) {
-      console.log('레이드, 스케줄 저장은 추후 구현 예정:', {
-        raids: raids.value,
-        schedules: schedules.value
-      })
+    // 결과 메시지 표시
+    if (hasAnyChanges) {
+      alert(`저장이 완료되었습니다!\n저장된 항목: ${savedItems.join(', ')}`)
+      console.log('전체 저장 완료!')
+    } else {
+      alert('저장할 변경사항이 없습니다.')
+      console.log('저장할 변경사항 없음')
     }
     
   } catch (error) {
@@ -251,17 +302,30 @@ const saveAll = async () => {
         :getCharacterRaids="getCharacterRaids"
         @add-raid="addRaid"
         @delete-raid="deleteRaid"
+        @swap-raid-order="swapRaidOrder"
       />
       
       <CharacterSection 
+        ref="characterSectionRef"
         :characters="characters"
         :isCharacterMaxed="isCharacterMaxed"
+        :newCharacters="newCharacters"
+        :deletedCharacters="deletedCharacters"
         @add-character="addCharacter"
         @delete-character="deleteCharacter"
+        @update:newCharacters="(value) => newCharacters = value"
+        @update:deletedCharacters="(value) => deletedCharacters = value"
       />
       
       <div class="action-buttons">
-        <button class="save-btn" @click="saveAll">저장</button>
+        <button class="save-btn" @click="saveAll" :disabled="!hasChanges">
+          <span v-if="hasChanges">
+            저장 ({{ totalChanges }}개 변경)
+          </span>
+          <span v-else>
+            저장
+          </span>
+        </button>
       </div>
     </div>
   </div>
@@ -293,11 +357,19 @@ const saveAll = async () => {
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  position: relative;
 }
 
-.save-btn:hover {
+.save-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 </style>

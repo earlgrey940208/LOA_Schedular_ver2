@@ -22,18 +22,41 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['add-raid', 'delete-raid'])
+const emit = defineEmits(['add-raid', 'delete-raid', 'swap-raid-order'])
 
 // useDragDrop composable 사용
 const {
-  onRaidDragStart,
   onPartyDragStart,
   onDragOver,
-  onRaidDrop,
   onPartyDrop,
   onScheduleDrop,
   onRightClick
 } = useDragDrop()
+
+// 레이드 드래그 관련 상태
+const draggedRaid = ref(null)
+const draggedRaidIndex = ref(null)
+
+// 레이드 드래그 시작
+const onRaidDragStart = (event, raid, index) => {
+  draggedRaid.value = raid
+  draggedRaidIndex.value = index
+  event.dataTransfer.effectAllowed = 'move'
+}
+
+// 레이드 드롭 처리
+const onRaidDrop = (event, targetIndex) => {
+  event.preventDefault()
+  
+  if (draggedRaidIndex.value !== null && draggedRaidIndex.value !== targetIndex) {
+    // App.vue의 swapRaidOrder 함수 호출
+    emit('swap-raid-order', draggedRaidIndex.value, targetIndex)
+  }
+  
+  // 드래그 상태 초기화
+  draggedRaid.value = null
+  draggedRaidIndex.value = null
+}
 
 // 레이드 추가 관련 상태
 const newRaidInput = ref('')
@@ -90,17 +113,17 @@ const deleteRaid = (raidName) => {
             <th>파티</th>
             <th 
               v-for="(raid, index) in raids" 
-              :key="raid"
+              :key="raid.name"
               class="raid-header draggable-header"
               draggable="true"
               @dragstart="onRaidDragStart($event, raid, index)"
               @dragover="onDragOver"
-              @drop="onRaidDrop($event, index, raids)"
+              @drop="onRaidDrop($event, index)"
             >
-              {{ raid }}
+              {{ raid.name }}
               <button 
                 class="delete-raid-btn"
-                @click="deleteRaid(raid)"
+                @click="deleteRaid(raid.name)"
                 @click.stop
               >
                 ×
@@ -139,14 +162,14 @@ const deleteRaid = (raidName) => {
             <td class="party-cell">{{ party }}</td>
             <td 
               v-for="raid in raids" 
-              :key="raid" 
+              :key="raid.name" 
               class="raid-cell"
               @dragover="onDragOver"
-              @drop="onScheduleDrop($event, party, raid, schedules, getCharacterRaids)"
+              @drop="onScheduleDrop($event, party, raid.name, schedules, getCharacterRaids)"
             >
               <div class="scheduled-characters">
                 <span
-                  v-for="(character, index) in getScheduledCharacters(party, raid)"
+                  v-for="(character, index) in getScheduledCharacters(party, raid.name)"
                   :key="character.scheduleId"
                   class="scheduled-character"
                   :style="{ backgroundColor: userColors[character.userId] }"

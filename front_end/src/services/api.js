@@ -29,11 +29,18 @@ export const raidApi = {
       
       const data = await handleResponse(response)
       console.log('받은 레이드 데이터:', data)
-      return data.map(raid => raid.name)
+      
+      // seq 순으로 정렬하여 반환
+      return data.sort((a, b) => a.seq - b.seq)
     } catch (error) {
       console.error('Error fetching raids:', error)
-      // 기본값 반환
-      return ['베히모스', '하기르', '노브', '노르둠']
+      // 기본값 반환 (seq 포함)
+      return [
+        { name: '베히모스', seq: 1 },
+        { name: '하기르', seq: 2 },
+        { name: '노브', seq: 3 },
+        { name: '노르둠', seq: 4 }
+      ]
     }
   },
 
@@ -62,6 +69,21 @@ export const raidApi = {
       return response.ok
     } catch (error) {
       console.error('Error deleting raid:', error)
+      throw error
+    }
+  },
+
+  // 레이드 순서 업데이트 (seq swap)
+  updateRaidOrder: async (raidUpdates) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/raid/order`, {
+        ...fetchConfig,
+        method: 'PUT',
+        body: JSON.stringify(raidUpdates)
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error updating raid order:', error)
       throw error
     }
   }

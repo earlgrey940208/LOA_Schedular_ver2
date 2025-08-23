@@ -26,4 +26,9 @@ export const defaultCharacters = {
 }
 
 // 기본 레이드 목록
-export const defaultRaids = ['베히모스', '하기르', '노브', '노르둠']
+export const defaultRaids = [
+  { name: '베히모스', seq: 1 },
+  { name: '하기르', seq: 2 },
+  { name: '노브', seq: 3 },
+  { name: '노르둠', seq: 4 }
+]

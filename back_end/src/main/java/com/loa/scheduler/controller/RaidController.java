@@ -17,10 +17,10 @@ public class RaidController {
     @Autowired
     private RaidRepository raidRepository;
     
-    // 모든 레이드 조회
+    // 모든 레이드 조회 (seq 순으로 정렬)
     @GetMapping
     public List<Raid> getAllRaids() {
-        return raidRepository.findAll();
+        return raidRepository.findAllOrderBySeq();
     }
     
     // 레이드 생성
@@ -55,5 +55,38 @@ public class RaidController {
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
+    }
+    
+    // 레이드 순서 업데이트 (일괄)
+    @PutMapping("/order")
+    public ResponseEntity<List<Raid>> updateRaidOrder(@Valid @RequestBody List<RaidOrderUpdate> updates) {
+        try {
+            for (RaidOrderUpdate update : updates) {
+                Optional<Raid> optionalRaid = raidRepository.findById(update.getName());
+                if (optionalRaid.isPresent()) {
+                    Raid raid = optionalRaid.get();
+                    raid.setSeq(Long.valueOf(update.getSeq()));
+                    raidRepository.save(raid);
+                }
+            }
+            
+            // 업데이트된 전체 레이드 목록을 seq 순으로 반환
+            List<Raid> updatedRaids = raidRepository.findAll();
+            updatedRaids.sort((a, b) -> Long.compare(a.getSeq(), b.getSeq()));
+            return ResponseEntity.ok(updatedRaids);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    // 레이드 순서 업데이트를 위한 DTO 클래스
+    public static class RaidOrderUpdate {
+        private String name;
+        private Integer seq;
+        
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public Integer getSeq() { return seq; }
+        public void setSeq(Integer seq) { this.seq = seq; }
     }
 }
