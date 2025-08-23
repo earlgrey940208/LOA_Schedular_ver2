@@ -53,6 +53,7 @@
   raidName: "레이드명",   // FK
   characterName: "캐릭터명", // FK
   partyName: "파티명"
+  isFinish: boolean // 스케줄 완료 여부
 }
 ```
 
@@ -134,10 +135,11 @@ cd back_end && ./gradlew bootRun
 ```
 
 ## 향후 계획
-- 백엔드 API 개발 (Spring Boot 예정)
-- 데이터베이스 연동
-- 저장/불러오기 기능 구현
-- 사용자 인증 시스템
+- [x] 백엔드 API 개발 (Spring Boot)
+- [x] 데이터베이스 연동
+- [x] 저장/불러오기 기능 구현
+- [ ] 사용자 인증 시스템
+- [x] 외부PC 접근 가능 구현
 
 ## 개발자
 정현희 (JHH)

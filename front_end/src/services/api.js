@@ -24,7 +24,7 @@ export const raidApi = {
   getAllRaids: async () => {
     try {
       console.log('API 호출 시작: getAllRaids')
-      const response = await fetch(`${API_BASE_URL}/Raid`, fetchConfig)
+      const response = await fetch(`${API_BASE_URL}/raid`, fetchConfig)
       console.log('레이드 응답 상태:', response.status)
       
       const data = await handleResponse(response)
@@ -40,7 +40,7 @@ export const raidApi = {
   // 레이드 생성
   createRaid: async (raidData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/Raid`, {
+      const response = await fetch(`${API_BASE_URL}/raid`, {
         ...fetchConfig,
         method: 'POST',
         body: JSON.stringify(raidData)
@@ -55,7 +55,7 @@ export const raidApi = {
   // 레이드 삭제
   deleteRaid: async (raidId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/Raid/${raidId}`, {
+      const response = await fetch(`${API_BASE_URL}/raid/${raidId}`, {
         ...fetchConfig,
         method: 'DELETE'
       })
