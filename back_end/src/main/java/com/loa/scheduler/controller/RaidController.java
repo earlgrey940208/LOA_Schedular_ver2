@@ -34,12 +34,13 @@ public class RaidController {
     }
     
     // 레이드 수정
-    @PutMapping("/{id}")
-    public ResponseEntity<Raid> updateRaid(@PathVariable Long id, @Valid @RequestBody Raid raidDetails) {
-        Optional<Raid> optionalRaid = raidRepository.findById(id);
+    @PutMapping("/{name}")
+    public ResponseEntity<Raid> updateRaid(@PathVariable String name, @Valid @RequestBody Raid raidDetails) {
+        Optional<Raid> optionalRaid = raidRepository.findById(name);
         if (optionalRaid.isPresent()) {
             Raid raid = optionalRaid.get();
-            raid.setName(raidDetails.getName());
+            // name은 primary key이므로 변경 불가, seq만 수정
+            raid.setSeq(raidDetails.getSeq());
             Raid updatedRaid = raidRepository.save(raid);
             return ResponseEntity.ok(updatedRaid);
         }
@@ -47,10 +48,10 @@ public class RaidController {
     }
     
     // 레이드 삭제
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteRaid(@PathVariable Long id) {
-        if (raidRepository.existsById(id)) {
-            raidRepository.deleteById(id);
+    @DeleteMapping("/{name}")
+    public ResponseEntity<Void> deleteRaid(@PathVariable String name) {
+        if (raidRepository.existsById(name)) {
+            raidRepository.deleteById(name);
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();

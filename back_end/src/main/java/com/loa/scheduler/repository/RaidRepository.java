@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface RaidRepository extends JpaRepository<Raid, Long> {
+public interface RaidRepository extends JpaRepository<Raid, String> {
     Optional<Raid> findByName(String name);
     boolean existsByName(String name);
 }

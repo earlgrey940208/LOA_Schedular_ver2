@@ -92,7 +92,8 @@ export const characterApi = {
         groupedCharacters[userId].push({
           name: character.name,
           isSupporter: character.isSupporter === 'Y',
-          userId: character.userId
+          userId: character.userId,
+          seq: character.seq
         })
       })
       
@@ -133,16 +134,36 @@ export const characterApi = {
     }
   },
 
-  // 캐릭터 삭제
-  deleteCharacter: async (characterId) => {
+  // 캐릭터 삭제 (이름 기반)
+  deleteCharacter: async (characterName) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/charactors/${characterId}`, {
+      const response = await fetch(`${API_BASE_URL}/charactors/${encodeURIComponent(characterName)}`, {
         ...fetchConfig,
         method: 'DELETE'
       })
       return response.ok
     } catch (error) {
       console.error('Error deleting character:', error)
+      throw error
+    }
+  },
+
+  // 캐릭터 삭제 (이름 기반) - 중복 제거됨
+  deleteCharacterByName: async (characterName) => {
+    return characterApi.deleteCharacter(characterName)
+  },
+
+  // 캐릭터 일괄 저장
+  saveAllCharacters: async (characters) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/charactors/batch`, {
+        ...fetchConfig,
+        method: 'PUT',
+        body: JSON.stringify(characters)
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error saving all characters:', error)
       throw error
     }
   }

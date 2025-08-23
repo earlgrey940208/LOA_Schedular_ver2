@@ -9,11 +9,8 @@ import jakarta.validation.constraints.NotBlank;
 public class Raid {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
     @NotBlank(message = "레이드 이름은 필수입니다")
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
 
     private Long seq;
@@ -27,9 +24,6 @@ public class Raid {
     }
     
     // Getter & Setter
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     
