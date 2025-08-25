@@ -132,11 +132,17 @@ export function useDragDrop() {
   }
 
   // 캐릭터를 스케줄에 배치하는 드롭 처리
-  const onScheduleDrop = (event, party, raid, schedules, getCharacterRaids) => {
+  const onScheduleDrop = (event, party, raid, schedules, getCharacterRaids, isScheduleFinished) => {
     event.preventDefault()
     
     // 캐릭터 배치 드롭인 경우에만 처리
     if (draggedCharacter.value && dragState.value.type === 'character') {
+      // 스케줄이 완료된 상태면 드롭 불가
+      if (isScheduleFinished && isScheduleFinished(party, raid)) {
+        resetDragState()
+        return
+      }
+      
       // schedules가 제대로 전달되었는지 확인
       if (!schedules || typeof schedules !== 'object') {
         resetDragState()
@@ -198,20 +204,32 @@ export function useDragDrop() {
     dragState.value = { type: null, data: null, sourceIndex: null, userName: null }
   }
 
-  // 우클릭으로 캐릭터 삭제
-  const onRightClick = (event, party, raid, characterIndex, schedules) => {
+  // 우클릭 처리 - 캐릭터 삭제 또는 스케줄 완료 토글
+  const onRightClick = (event, party, raid, characterIndex, schedules, toggleScheduleFinish, isScheduleFinished) => {
     event.preventDefault()
     const key = `${party}-${raid}`
     
     // schedules가 ref 객체인지 확인하고 .value로 접근
     const schedulesData = schedules.value || schedules
     
-    if (schedulesData[key]) {
+    // 캐릭터가 있으면 캐릭터 삭제, 없으면 스케줄 완료 토글
+    if (characterIndex !== undefined && characterIndex !== null && schedulesData[key] && schedulesData[key][characterIndex]) {
+      // 스케줄이 완료된 상태면 캐릭터 삭제 불가
+      if (isScheduleFinished && isScheduleFinished(party, raid)) {
+        return
+      }
+      
+      // 캐릭터 삭제
       schedulesData[key].splice(characterIndex, 1)
       
       // 배열이 비어있으면 키 삭제
       if (schedulesData[key].length === 0) {
         delete schedulesData[key]
+      }
+    } else {
+      // 빈 셀이면 스케줄 완료 상태 토글
+      if (toggleScheduleFinish) {
+        toggleScheduleFinish(party, raid)
       }
     }
   }

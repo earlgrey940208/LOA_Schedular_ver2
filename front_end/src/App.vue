@@ -18,6 +18,7 @@ const raids = ref([])
 const parties = ref([...defaultParties])
 const characters = reactive({})
 const schedules = ref({})
+const scheduleFinish = ref({}) // 스케줄 완료 상태 관리 {party-raid: true/false}
 
 // 변경 추적
 const newCharacters = ref([]) // 새로 추가된 캐릭터들
@@ -48,10 +49,19 @@ const {
   onRaidDrop,
   onPartyDrop,
   onCharacterOrderDrop,
-  onScheduleDrop,
-  onRightClick,
+  onScheduleDrop: originalOnScheduleDrop,
+  onRightClick: originalOnRightClick,
   resetDragState
 } = useDragDrop()
+
+// 래핑된 드래그&드롭 함수들
+const onScheduleDrop = (event, party, raid, schedules, getCharacterRaids) => {
+  return originalOnScheduleDrop(event, party, raid, schedules, getCharacterRaids, isScheduleFinished)
+}
+
+const onRightClick = (event, party, raid, characterIndex, schedules) => {
+  return originalOnRightClick(event, party, raid, characterIndex, schedules, toggleScheduleFinish, isScheduleFinished)
+}
 
 // 데이터 로드 함수들
 const loadData = async () => {
@@ -116,6 +126,17 @@ const getCharacterRaids = (characterName) => {
     })
   })
   return Array.from(raidsList)
+}
+
+// 스케줄 완료 상태 관리 함수들
+const isScheduleFinished = (party, raid) => {
+  const key = `${party}-${raid}`
+  return scheduleFinish.value[key] || false
+}
+
+const toggleScheduleFinish = (party, raid) => {
+  const key = `${party}-${raid}`
+  scheduleFinish.value[key] = !scheduleFinish.value[key]
 }
 
 // 캐릭터가 최대 레이드 수에 도달했는지 확인
@@ -394,8 +415,11 @@ const saveAll = async () => {
         :raids="raids"
         :parties="parties"
         :schedules="schedules"
+        :scheduleFinish="scheduleFinish"
         :getScheduledCharacters="getScheduledCharacters"
         :getCharacterRaids="getCharacterRaids"
+        :isScheduleFinished="isScheduleFinished"
+        :toggleScheduleFinish="toggleScheduleFinish"
         :onDragOver="onDragOver"
         :onScheduleDrop="onScheduleDrop"
         :onRightClick="onRightClick"

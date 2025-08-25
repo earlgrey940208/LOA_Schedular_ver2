@@ -15,11 +15,23 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  scheduleFinish: {
+    type: Object,
+    required: true
+  },
   getScheduledCharacters: {
     type: Function,
     required: true
   },
   getCharacterRaids: {
+    type: Function,
+    required: true
+  },
+  isScheduleFinished: {
+    type: Function,
+    required: true
+  },
+  toggleScheduleFinish: {
     type: Function,
     required: true
   },
@@ -62,6 +74,18 @@ const isAddingRaid = ref(false)
 // 스케줄 헬퍼 함수 - props에서 받은 함수 사용
 const getScheduledCharacters = (party, raid) => {
   return props.getScheduledCharacters(party, raid)
+}
+
+// 캐릭터 우클릭 헬퍼 함수 - 이벤트 전파 방지
+const onCharacterRightClick = (event, party, raid, index, schedules, toggleScheduleFinish, isScheduleFinished) => {
+  event.stopPropagation() // 셀 우클릭 이벤트로 전파 방지
+  props.onRightClick(event, party, raid, index, schedules, toggleScheduleFinish, isScheduleFinished)
+}
+
+// 셀 우클릭 헬퍼 함수 - 셀 배경에서 우클릭 시 완료 토글
+const onCellRightClick = (event, party, raid, schedules, toggleScheduleFinish, isScheduleFinished) => {
+  // 셀 배경을 클릭한 경우 완료 상태 토글
+  props.onRightClick(event, party, raid, null, schedules, toggleScheduleFinish, isScheduleFinished)
 }
 
 // 레이드 추가 모드 시작
@@ -160,8 +184,13 @@ const deleteRaid = (raidName) => {
               v-for="raid in raids" 
               :key="raid.name || raid" 
               class="raid-cell"
-              @dragover="onDragOver"
-              @drop="onScheduleDrop($event, party, raid.name || raid, schedules, getCharacterRaids)"
+              :class="{ 
+                'finished': isScheduleFinished(party, raid.name || raid),
+                'readonly': isScheduleFinished(party, raid.name || raid)
+              }"
+              @dragover="!isScheduleFinished(party, raid.name || raid) ? onDragOver($event) : null"
+              @drop="onScheduleDrop($event, party, raid.name || raid, schedules, getCharacterRaids, isScheduleFinished)"
+              @contextmenu="onCellRightClick($event, party, raid.name || raid, schedules, toggleScheduleFinish, isScheduleFinished)"
             >
               <div class="scheduled-characters">
                 <span
@@ -170,7 +199,7 @@ const deleteRaid = (raidName) => {
                   class="scheduled-character"
                   :style="{ backgroundColor: userColors[character.userId] }"
                   :class="{ supporter: character.isSupporter }"
-                  @contextmenu="onRightClick($event, party, raid.name || raid, index, schedules)"
+                  @contextmenu="onCharacterRightClick($event, party, raid.name || raid, index, schedules, toggleScheduleFinish, isScheduleFinished)"
                 >
                   {{ character.name }}
                 </span>
@@ -234,10 +263,29 @@ const deleteRaid = (raidName) => {
   min-height: 60px;
   background-color: white;
   position: relative;
+  transition: background-color 0.3s ease;
 }
 
 .raid-cell:hover {
   background-color: #f8f9fa;
+}
+
+.raid-cell.finished {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.raid-cell.finished:hover {
+  background-color: #e9ecef;
+}
+
+.raid-cell.readonly {
+  cursor: not-allowed;
+}
+
+.raid-cell.finished .scheduled-character {
+  opacity: 0.7;
+  filter: grayscale(0.3);
 }
 
 .scheduled-characters {
