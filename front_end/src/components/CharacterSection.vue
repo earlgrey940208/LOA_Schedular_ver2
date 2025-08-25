@@ -1,6 +1,5 @@
 <script setup>
 import { ref, nextTick, computed } from 'vue'
-import { useDragDrop } from '@/composables/useDragDrop'
 import { userColors } from '@/utils/constants'
 import { characterApi } from '@/services/api'
 
@@ -20,24 +19,30 @@ const props = defineProps({
   deletedCharacters: {
     type: Array,
     required: true
+  },
+  onCharacterDragStart: {
+    type: Function,
+    required: true
+  },
+  onCharacterOrderDragStart: {
+    type: Function,
+    required: true
+  },
+  onCharacterOrderDrop: {
+    type: Function,
+    required: true
+  },
+  onDragOver: {
+    type: Function,
+    required: true
   }
 })
 
 const emit = defineEmits(['add-character', 'delete-character', 'update:newCharacters', 'update:deletedCharacters'])
 
-// useDragDrop composable 사용
-const {
-  onCharacterDragStart: originalOnCharacterDragStart,
-  onCharacterOrderDragStart,
-  onDragOver,
-  onCharacterOrderDrop
-} = useDragDrop()
-
 // 캐릭터 드래그 시작 디버깅
-const onCharacterDragStart = (character) => {
-  console.log('캐릭터 드래그 시작:', character)
-  console.log('캐릭터 최대 레이드 도달 여부:', props.isCharacterMaxed(character.name))
-  return originalOnCharacterDragStart(character)
+const handleCharacterDragStart = (character) => {
+  return props.onCharacterDragStart(character)
 }
 
 // 캐릭터 추가 관련 상태
@@ -172,7 +177,7 @@ defineExpose({
                     'drag-target': true
                   }"
                   :draggable="!isCharacterMaxed(character.name)"
-                  @dragstart="!isCharacterMaxed(character.name) ? onCharacterDragStart(character) : onCharacterOrderDragStart($event, character, userName, index)"
+                  @dragstart="!isCharacterMaxed(character.name) ? handleCharacterDragStart(character) : onCharacterOrderDragStart($event, character, userName, index)"
                   @dragover="onDragOver"
                   @drop="onCharacterOrderDrop($event, userName, index, characters)"
                   @dragenter="onDragOver"

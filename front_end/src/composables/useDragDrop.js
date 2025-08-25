@@ -63,11 +63,21 @@ export function useDragDrop() {
     if (dragState.value.type === 'raid') {
       const sourceIndex = dragState.value.sourceIndex
       if (sourceIndex !== targetIndex) {
+        // raids가 ref 객체인지 확인하고 적절히 접근
+        const raidsArray = raids.value || raids
+        
         // 레이드 순서 변경
-        const raidList = [...raids.value]
+        const raidList = [...raidsArray]
         const [movedRaid] = raidList.splice(sourceIndex, 1)
         raidList.splice(targetIndex, 0, movedRaid)
-        raids.value = raidList
+        
+        // raids가 ref 객체인지 확인하고 적절히 업데이트
+        if (raids.value !== undefined) {
+          raids.value = raidList
+        } else {
+          // raids 배열 자체를 직접 수정 (splice 사용)
+          raids.splice(0, raids.length, ...raidList)
+        }
       }
     }
     
@@ -81,11 +91,21 @@ export function useDragDrop() {
     if (dragState.value.type === 'party') {
       const sourceIndex = dragState.value.sourceIndex
       if (sourceIndex !== targetIndex) {
+        // parties가 ref 객체인지 확인하고 적절히 접근
+        const partiesArray = parties.value || parties
+        
         // 파티 순서 변경
-        const partyList = [...parties.value]
+        const partyList = [...partiesArray]
         const [movedParty] = partyList.splice(sourceIndex, 1)
         partyList.splice(targetIndex, 0, movedParty)
-        parties.value = partyList
+        
+        // parties가 ref 객체인지 확인하고 적절히 업데이트
+        if (parties.value !== undefined) {
+          parties.value = partyList
+        } else {
+          // parties 배열 자체를 직접 수정 (splice 사용)
+          parties.splice(0, parties.length, ...partyList)
+        }
       }
     }
     
@@ -117,49 +137,56 @@ export function useDragDrop() {
     
     // 캐릭터 배치 드롭인 경우에만 처리
     if (draggedCharacter.value && dragState.value.type === 'character') {
+      // schedules가 제대로 전달되었는지 확인
+      if (!schedules || typeof schedules !== 'object') {
+        resetDragState()
+        return
+      }
+      
+      // schedules가 ref 객체인지 확인하고 .value로 접근
+      const schedulesData = schedules.value || schedules
+      
       const key = `${party}-${raid}`
       
       // 스케줄에 해당 키가 없으면 빈 배열로 초기화
-      if (!schedules.value[key]) {
-        schedules.value[key] = []
+      if (!schedulesData[key]) {
+        schedulesData[key] = []
       }
       
-      // 이미 배치된 캐릭터인지 확인 (같은 셀 내 중복 방지)
-      const isAlreadyScheduled = schedules.value[key].some(
+      // 1. 이미 배치된 캐릭터인지 확인 (같은 셀 내 중복 방지)
+      const isAlreadyScheduled = schedulesData[key].some(
         char => char.name === draggedCharacter.value.name
       )
       
-      // 동일한 레이드의 다른 파티에 이미 배치되어 있는지 확인
-      const isAlreadyInSameRaid = Object.keys(schedules.value).some(scheduleKey => {
+      // 2. 동일한 레이드의 다른 파티에 이미 배치되어 있는지 확인
+      const isAlreadyInSameRaid = Object.keys(schedulesData).some(scheduleKey => {
         const [existingParty, existingRaid] = scheduleKey.split('-')
         // 같은 레이드이지만 다른 파티인 경우
         if (existingRaid === raid && existingParty !== party) {
-          return schedules.value[scheduleKey].some(
+          return schedulesData[scheduleKey].some(
             char => char.name === draggedCharacter.value.name
           )
         }
         return false
       })
       
-      // 캐릭터가 이미 3개 레이드에 배치되어 있는지 확인
-      const characterRaids = getCharacterRaids(draggedCharacter.value.name)
+      // 3. 캐릭터가 이미 3개 레이드에 배치되어 있는지 확인
+      const characterRaids = getCharacterRaids ? getCharacterRaids(draggedCharacter.value.name) : []
       const isCharacterAtMaxRaids = characterRaids.length >= 3 && !characterRaids.includes(raid)
       
-      // 같은 유저의 다른 캐릭터가 이미 해당 셀에 배치되어 있는지 확인
-      const isSameUserInSameRaid = schedules.value[key].some(
+      // 4. 같은 유저의 다른 캐릭터가 이미 해당 셀에 배치되어 있는지 확인
+      const isSameUserInSameRaid = schedulesData[key].some(
         char => char.userId === draggedCharacter.value.userId
       )
       
       if (!isAlreadyScheduled && !isAlreadyInSameRaid && !isCharacterAtMaxRaids && !isSameUserInSameRaid) {
-        schedules.value[key].push({
+        schedulesData[key].push({
           ...draggedCharacter.value,
-          scheduleId: Date.now(), // 임시 ID
+          scheduleId: Date.now(),
           raidName: raid,
           partyName: party
         })
       }
-      
-      draggedCharacter.value = null
     }
     
     resetDragState()
@@ -167,6 +194,7 @@ export function useDragDrop() {
 
   // 드래그 상태 초기화
   const resetDragState = () => {
+    draggedCharacter.value = null
     dragState.value = { type: null, data: null, sourceIndex: null, userName: null }
   }
 
@@ -175,12 +203,15 @@ export function useDragDrop() {
     event.preventDefault()
     const key = `${party}-${raid}`
     
-    if (schedules.value[key]) {
-      schedules.value[key].splice(characterIndex, 1)
+    // schedules가 ref 객체인지 확인하고 .value로 접근
+    const schedulesData = schedules.value || schedules
+    
+    if (schedulesData[key]) {
+      schedulesData[key].splice(characterIndex, 1)
       
       // 배열이 비어있으면 키 삭제
-      if (schedules.value[key].length === 0) {
-        delete schedules.value[key]
+      if (schedulesData[key].length === 0) {
+        delete schedulesData[key]
       }
     }
   }

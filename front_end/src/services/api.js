@@ -23,12 +23,9 @@ export const raidApi = {
   // 모든 레이드 조회
   getAllRaids: async () => {
     try {
-      console.log('API 호출 시작: getAllRaids')
       const response = await fetch(`${API_BASE_URL}/raid`, fetchConfig)
-      console.log('레이드 응답 상태:', response.status)
       
       const data = await handleResponse(response)
-      console.log('받은 레이드 데이터:', data)
       
       // seq 순으로 정렬하여 반환
       return data.sort((a, b) => a.seq - b.seq)
@@ -111,12 +108,9 @@ export const characterApi = {
   // 모든 캐릭터 조회
   getAllCharacters: async () => {
     try {
-      console.log('API 호출 시작: getAllCharacters')
       const response = await fetch(`${API_BASE_URL}/charactors`, fetchConfig)
-      console.log('캐릭터 응답 상태:', response.status)
       
       const data = await handleResponse(response)
-      console.log('받은 캐릭터 데이터:', data)
       
       // 캐릭터 데이터를 user_id별로 그룹화
       const groupedCharacters = {}
@@ -213,12 +207,9 @@ export const scheduleApi = {
   // 모든 스케줄 조회
   getAllSchedules: async () => {
     try {
-      console.log('API 호출 시작: getAllSchedules')
       const response = await fetch(`${API_BASE_URL}/Schedule`, fetchConfig)
-      console.log('스케줄 응답 상태:', response.status)
       
       const data = await handleResponse(response)
-      console.log('받은 스케줄 데이터:', data)
       return data
     } catch (error) {
       console.error('Error fetching schedules:', error)

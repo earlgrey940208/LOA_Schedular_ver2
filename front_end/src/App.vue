@@ -85,7 +85,6 @@ const loadData = async () => {
       Object.assign(characters, defaultCharacters)
     }
     
-    console.log('데이터 로드 완료:', { raids: raids.value, characters })
   } catch (error) {
     console.error('데이터 로드 실패:', error)
     error.value = '데이터를 불러오는데 실패했습니다'
@@ -100,6 +99,12 @@ onMounted(async () => {
 })
 
 // 스케줄 관련 헬퍼 함수들
+const getScheduledCharacters = (party, raid) => {
+  const key = `${party}-${raid}`
+  const result = schedules.value[key] || []
+  return result
+}
+
 const getCharacterRaids = (characterName) => {
   const raidsList = new Set()
   Object.keys(schedules.value).forEach(key => {
@@ -144,10 +149,6 @@ const addRaid = (raidName) => {
     // 변경 추적에 추가
     newRaids.value.push(newRaid)
     
-    console.log('레이드 추가 완료:', newRaid)
-    console.log('현재 최대 seq (저장된):', maxSeq)
-    console.log('새 레이드 개수:', newRaids.value.length)
-    console.log('새 레이드 추적 목록:', newRaids.value)
   } else {
     console.warn('레이드 추가 실패 - 이미 존재하거나 빈 이름:', raidName)
   }
@@ -174,15 +175,11 @@ const deleteRaid = (raidName) => {
     if (newRaidIndex !== -1) {
       // 새로 추가된 레이드를 삭제하는 경우 - newRaids에서만 제거
       newRaids.value.splice(newRaidIndex, 1)
-      console.log('새 레이드 삭제 - 추적에서만 제거:', deletedRaid)
     } else {
       // 기존 레이드를 삭제하는 경우 - deletedRaids에 추가
       deletedRaids.value.push(deletedRaid)
-      console.log('기존 레이드 삭제 - 삭제 목록에 추가:', deletedRaid)
     }
     
-    console.log('레이드 삭제 완료:', deletedRaid)
-    console.log('삭제된 레이드 추적 목록:', deletedRaids.value)
   } else {
     console.warn('삭제할 레이드를 찾을 수 없음:', raidName)
   }
@@ -215,8 +212,6 @@ const addCharacter = async (userName, characterName) => {
     // 새 캐릭터 목록에 추가 (서버 저장용)
     newCharacters.value.push(newCharacter)
     
-    console.log('캐릭터 로컬 추가 성공:', characterName)
-    console.log('새 캐릭터 목록:', newCharacters.value)
   } catch (error) {
     console.error('캐릭터 추가 실패:', error)
     error.value = '캐릭터 추가에 실패했습니다'
@@ -224,7 +219,6 @@ const addCharacter = async (userName, characterName) => {
 }
 
 const deleteCharacter = (userName, characterName) => {
-  console.log(`=== 캐릭터 삭제 요청: ${characterName} (사용자: ${userName}) ===`)
   
   const userCharacters = characters[userName]
   if (userCharacters) {
@@ -236,26 +230,19 @@ const deleteCharacter = (userName, characterName) => {
       if (newCharacterIndex !== -1) {
         // 새로 추가된 캐릭터라면 newCharacters 목록에서만 제거 (서버 삭제 불필요)
         newCharacters.value.splice(newCharacterIndex, 1)
-        console.log('✓ 새 캐릭터 삭제:', characterName, '(서버 삭제 불필요)')
-        console.log('현재 새 캐릭터 목록:', newCharacters.value.map(c => c.name))
       } else {
         // 기존 캐릭터라면 삭제 목록에 추가 (서버에서 삭제 필요)
         deletedCharacters.value.push(characterName) // 이름만 저장
-        console.log('✓ 기존 캐릭터 삭제 예약:', characterName)
-        console.log('현재 삭제 예정 목록:', deletedCharacters.value)
       }
       
       // 로컬 상태에서 제거
       userCharacters.splice(characterIndex, 1)
-      console.log('✓ 로컬 상태에서 제거 완료:', characterName)
     } else {
       console.warn('❌ 캐릭터를 찾을 수 없음:', characterName)
     }
   } else {
     console.warn('❌ 사용자를 찾을 수 없음:', userName)
   }
-  
-  console.log('=== 삭제 요청 처리 완료 ===')
 }
 
 // 레이드 순서 변경 함수
@@ -407,7 +394,15 @@ const saveAll = async () => {
         :raids="raids"
         :parties="parties"
         :schedules="schedules"
+        :getScheduledCharacters="getScheduledCharacters"
         :getCharacterRaids="getCharacterRaids"
+        :onDragOver="onDragOver"
+        :onScheduleDrop="onScheduleDrop"
+        :onRightClick="onRightClick"
+        :onRaidDragStart="onRaidDragStart"
+        :onRaidDrop="onRaidDrop"
+        :onPartyDragStart="onPartyDragStart"
+        :onPartyDrop="onPartyDrop"
         @add-raid="addRaid"
         @delete-raid="deleteRaid"
         @swap-raid-order="swapRaidOrder"
@@ -419,6 +414,10 @@ const saveAll = async () => {
         :isCharacterMaxed="isCharacterMaxed"
         :newCharacters="newCharacters"
         :deletedCharacters="deletedCharacters"
+        :onCharacterDragStart="onCharacterDragStart"
+        :onCharacterOrderDragStart="onCharacterOrderDragStart"
+        :onCharacterOrderDrop="onCharacterOrderDrop"
+        :onDragOver="onDragOver"
         @add-character="addCharacter"
         @delete-character="deleteCharacter"
         @update:newCharacters="(value) => newCharacters = value"

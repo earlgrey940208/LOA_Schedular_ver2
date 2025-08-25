@@ -1,6 +1,5 @@
 <script setup>
 import { ref, nextTick } from 'vue'
-import { useDragDrop } from '@/composables/useDragDrop'
 import { userColors } from '@/utils/constants'
 
 const props = defineProps({
@@ -16,7 +15,39 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  getScheduledCharacters: {
+    type: Function,
+    required: true
+  },
   getCharacterRaids: {
+    type: Function,
+    required: true
+  },
+  onDragOver: {
+    type: Function,
+    required: true
+  },
+  onScheduleDrop: {
+    type: Function,
+    required: true
+  },
+  onRightClick: {
+    type: Function,
+    required: true
+  },
+  onRaidDragStart: {
+    type: Function,
+    required: true
+  },
+  onRaidDrop: {
+    type: Function,
+    required: true
+  },
+  onPartyDragStart: {
+    type: Function,
+    required: true
+  },
+  onPartyDrop: {
     type: Function,
     required: true
   }
@@ -24,55 +55,13 @@ const props = defineProps({
 
 const emit = defineEmits(['add-raid', 'delete-raid', 'swap-raid-order'])
 
-// useDragDrop composable 사용
-const {
-  onPartyDragStart,
-  onDragOver,
-  onPartyDrop,
-  onScheduleDrop: originalOnScheduleDrop,
-  onRightClick
-} = useDragDrop()
-
-// 스케줄 드롭 디버깅
-const onScheduleDrop = (event, party, raid, schedules, getCharacterRaids) => {
-  console.log('스케줄 드롭 이벤트:', { party, raid })
-  console.log('현재 스케줄:', schedules)
-  return originalOnScheduleDrop(event, party, raid, schedules, getCharacterRaids)
-}
-
-// 레이드 드래그 관련 상태
-const draggedRaid = ref(null)
-const draggedRaidIndex = ref(null)
-
-// 레이드 드래그 시작
-const onRaidDragStart = (event, raid, index) => {
-  draggedRaid.value = raid
-  draggedRaidIndex.value = index
-  event.dataTransfer.effectAllowed = 'move'
-}
-
-// 레이드 드롭 처리
-const onRaidDrop = (event, targetIndex) => {
-  event.preventDefault()
-  
-  if (draggedRaidIndex.value !== null && draggedRaidIndex.value !== targetIndex) {
-    // App.vue의 swapRaidOrder 함수 호출
-    emit('swap-raid-order', draggedRaidIndex.value, targetIndex)
-  }
-  
-  // 드래그 상태 초기화
-  draggedRaid.value = null
-  draggedRaidIndex.value = null
-}
-
 // 레이드 추가 관련 상태
 const newRaidInput = ref('')
 const isAddingRaid = ref(false)
 
-// 스케줄 헬퍼 함수
+// 스케줄 헬퍼 함수 - props에서 받은 함수 사용
 const getScheduledCharacters = (party, raid) => {
-  const key = `${party}-${raid}`
-  return props.schedules[key] || []
+  return props.getScheduledCharacters(party, raid)
 }
 
 // 레이드 추가 모드 시작
@@ -120,17 +109,17 @@ const deleteRaid = (raidName) => {
             <th>파티</th>
             <th 
               v-for="(raid, index) in raids" 
-              :key="raid.name"
+              :key="raid.name || raid"
               class="raid-header draggable-header"
               draggable="true"
               @dragstart="onRaidDragStart($event, raid, index)"
               @dragover="onDragOver"
-              @drop="onRaidDrop($event, index)"
+              @drop="onRaidDrop($event, index, raids)"
             >
-              {{ raid.name }}
+              {{ raid.name || raid }}
               <button 
                 class="delete-raid-btn"
-                @click="deleteRaid(raid.name)"
+                @click="deleteRaid(raid.name || raid)"
                 @click.stop
               >
                 ×
@@ -169,19 +158,19 @@ const deleteRaid = (raidName) => {
             <td class="party-cell">{{ party }}</td>
             <td 
               v-for="raid in raids" 
-              :key="raid.name" 
+              :key="raid.name || raid" 
               class="raid-cell"
               @dragover="onDragOver"
-              @drop="onScheduleDrop($event, party, raid.name, schedules, getCharacterRaids)"
+              @drop="onScheduleDrop($event, party, raid.name || raid, schedules, getCharacterRaids)"
             >
               <div class="scheduled-characters">
                 <span
-                  v-for="(character, index) in getScheduledCharacters(party, raid.name)"
+                  v-for="(character, index) in getScheduledCharacters(party, raid.name || raid)"
                   :key="character.scheduleId"
                   class="scheduled-character"
                   :style="{ backgroundColor: userColors[character.userId] }"
                   :class="{ supporter: character.isSupporter }"
-                  @contextmenu="onRightClick($event, party, raid, index, schedules)"
+                  @contextmenu="onRightClick($event, party, raid.name || raid, index, schedules)"
                 >
                   {{ character.name }}
                 </span>
