@@ -2,41 +2,52 @@ package com.loa.scheduler.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "Schedule")
+@IdClass(ScheduleId.class)
 public class Schedule {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @NotBlank(message = "파티명은 필수입니다")
+    @Column(name = "id", nullable = false)
+    private String id;
     
+    @Id
     @NotBlank(message = "레이드 이름은 필수입니다")
-    @Column(nullable = false)
+    @Column(name = "raid_name", nullable = false)
     private String raidName;
     
+    @Id
     @NotBlank(message = "캐릭터 이름은 필수입니다")
-    @Column(nullable = false)
+    @Column(name = "character_name", nullable = false)
     private String characterName;
     
-    // @NotNull(message = "완료 여부는 필수입니다")
-    // @Column(nullable = false)
-    private Boolean isFinish;
+    @Column(name = "isFinish", nullable = false)
+    private String isFinish = "N"; // 'Y' 또는 'N'
     
     // 기본 생성자
     public Schedule() {}
     
     // 생성자
-    public Schedule(String raidName, String characterName, Boolean isFinish) {
+    public Schedule(String id, String raidName, String characterName, String isFinish) {
+        this.id = id;
         this.raidName = raidName;
         this.characterName = characterName;
-        this.isFinish = isFinish;
+        this.isFinish = isFinish != null ? isFinish : "N";
+    }
+    
+    // Boolean 타입을 받는 편의 생성자
+    public Schedule(String id, String raidName, String characterName, Boolean isFinish) {
+        this.id = id;
+        this.raidName = raidName;
+        this.characterName = characterName;
+        this.isFinish = (isFinish != null && isFinish) ? "Y" : "N";
     }
     
     // Getter & Setter
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
     
     public String getRaidName() { return raidName; }
     public void setRaidName(String raidName) { this.raidName = raidName; }
@@ -44,6 +55,25 @@ public class Schedule {
     public String getCharacterName() { return characterName; }
     public void setCharacterName(String characterName) { this.characterName = characterName; }
     
-    public Boolean getIsFinish() { return isFinish; }
-    public void setIsFinish(Boolean isFinish) { this.isFinish = isFinish; }
+    public String getIsFinish() { return isFinish; }
+    public void setIsFinish(String isFinish) { this.isFinish = isFinish; }
+    
+    // Boolean 타입으로 변환하는 편의 메서드
+    public Boolean getIsFinishAsBoolean() {
+        return "Y".equals(this.isFinish);
+    }
+    
+    public void setIsFinishAsBoolean(Boolean isFinish) {
+        this.isFinish = (isFinish != null && isFinish) ? "Y" : "N";
+    }
+    
+    @Override
+    public String toString() {
+        return "Schedule{" +
+                "id='" + id + '\'' +
+                ", raidName='" + raidName + '\'' +
+                ", characterName='" + characterName + '\'' +
+                ", isFinish='" + isFinish + '\'' +
+                '}';
+    }
 }

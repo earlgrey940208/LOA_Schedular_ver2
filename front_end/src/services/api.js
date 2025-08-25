@@ -12,9 +12,25 @@ const fetchConfig = {
 // API 응답 처리 헬퍼 함수
 const handleResponse = async (response) => {
   if (response.ok) {
-    return await response.json()
+    const contentType = response.headers.get('content-type')
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json()
+    } else {
+      const text = await response.text()
+      try {
+        return JSON.parse(text)
+      } catch {
+        return { message: text }
+      }
+    }
   } else {
-    throw new Error(`HTTP Error: ${response.status}`)
+    const errorText = await response.text()
+    try {
+      const errorJson = JSON.parse(errorText)
+      throw new Error(errorJson.error || errorJson.message || `HTTP Error: ${response.status}`)
+    } catch {
+      throw new Error(`HTTP Error: ${response.status} - ${errorText}`)
+    }
   }
 }
 
@@ -232,6 +248,39 @@ export const scheduleApi = {
     }
   },
 
+  // 스케줄 일괄 저장 (프론트엔드 전체 스케줄 저장)
+  saveAllSchedules: async (schedules, scheduleFinish) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/Schedule/batch`, {
+        ...fetchConfig,
+        method: 'POST',
+        body: JSON.stringify({
+          schedules: schedules,
+          scheduleFinish: scheduleFinish
+        })
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error saving all schedules:', error)
+      throw error
+    }
+  },
+
+  // 스케줄 완료 상태 업데이트
+  updateScheduleFinish: async (partyName, raidName, isFinish) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/Schedule/finish/${encodeURIComponent(partyName)}/${encodeURIComponent(raidName)}`, {
+        ...fetchConfig,
+        method: 'PUT',
+        body: JSON.stringify({ isFinish: isFinish })
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error updating schedule finish:', error)
+      throw error
+    }
+  },
+
   // 스케줄 삭제
   deleteSchedule: async (scheduleId) => {
     try {
@@ -242,6 +291,20 @@ export const scheduleApi = {
       return response.ok
     } catch (error) {
       console.error('Error deleting schedule:', error)
+      throw error
+    }
+  },
+
+  // 특정 파티와 레이드의 스케줄 삭제
+  deleteScheduleByPartyAndRaid: async (partyName, raidName) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/Schedule/party/${encodeURIComponent(partyName)}/raid/${encodeURIComponent(raidName)}`, {
+        ...fetchConfig,
+        method: 'DELETE'
+      })
+      return response.ok
+    } catch (error) {
+      console.error('Error deleting schedule by party and raid:', error)
       throw error
     }
   }

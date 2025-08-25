@@ -132,7 +132,7 @@ export function useDragDrop() {
   }
 
   // 캐릭터를 스케줄에 배치하는 드롭 처리
-  const onScheduleDrop = (event, party, raid, schedules, getCharacterRaids, isScheduleFinished) => {
+  const onScheduleDrop = (event, party, raid, schedules, getCharacterRaids, isScheduleFinished, markScheduleAsChanged) => {
     event.preventDefault()
     
     // 캐릭터 배치 드롭인 경우에만 처리
@@ -192,6 +192,13 @@ export function useDragDrop() {
           raidName: raid,
           partyName: party
         })
+        
+        // 스케줄 변경사항 추적
+        if (markScheduleAsChanged) {
+          markScheduleAsChanged()
+        } else {
+          console.warn('⚠️ markScheduleAsChanged 함수가 전달되지 않음')
+        }
       }
     }
     
@@ -205,7 +212,7 @@ export function useDragDrop() {
   }
 
   // 우클릭 처리 - 캐릭터 삭제 또는 스케줄 완료 토글
-  const onRightClick = (event, party, raid, characterIndex, schedules, toggleScheduleFinish, isScheduleFinished) => {
+  const onRightClick = (event, party, raid, characterIndex, schedules, toggleScheduleFinish, isScheduleFinished, markScheduleAsChanged) => {
     event.preventDefault()
     const key = `${party}-${raid}`
     
@@ -226,10 +233,19 @@ export function useDragDrop() {
       if (schedulesData[key].length === 0) {
         delete schedulesData[key]
       }
+      
+      // 스케줄 변경사항 추적
+      if (markScheduleAsChanged) {
+        markScheduleAsChanged()
+      }
     } else {
       // 빈 셀이면 스케줄 완료 상태 토글
       if (toggleScheduleFinish) {
         toggleScheduleFinish(party, raid)
+        // 완료 상태 변경도 스케줄 변경사항으로 추적
+        if (markScheduleAsChanged) {
+          markScheduleAsChanged()
+        }
       }
     }
   }

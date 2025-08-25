@@ -5,7 +5,7 @@ import ScheduleSection from '@/components/ScheduleSection.vue'
 import CharacterSection from '@/components/CharacterSection.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorMessage from '@/components/ui/ErrorMessage.vue'
-import { raidApi, characterApi } from '@/services/api'
+import { raidApi, characterApi, scheduleApi } from '@/services/api'
 import { defaultParties, defaultCharacters, defaultRaids } from '@/utils/constants'
 import { useDragDrop } from '@/composables/useDragDrop'
 
@@ -27,14 +27,24 @@ const modifiedCharacters = ref([]) // 수정된 캐릭터들 (나중에 필요�
 const raidOrderChanges = ref([]) // 레이드 순서 변경 목록
 const newRaids = ref([]) // 새로 추가된 레이드들
 const deletedRaids = ref([]) // 삭제할 레이드 목록
+const hasScheduleChanges = ref(false) // 스케줄 변경 여부
 
 // 변경사항이 있는지 확인하는 computed
 const hasChanges = computed(() => {
-  return newCharacters.value.length > 0 || deletedCharacters.value.length > 0 || raidOrderChanges.value.length > 0 || newRaids.value.length > 0 || deletedRaids.value.length > 0
+  const result = newCharacters.value.length > 0 || 
+         deletedCharacters.value.length > 0 || 
+         raidOrderChanges.value.length > 0 || 
+         newRaids.value.length > 0 || 
+         deletedRaids.value.length > 0 ||
+         hasScheduleChanges.value
+  
+  return result
 })
 
 const totalChanges = computed(() => {
-  return newCharacters.value.length + deletedCharacters.value.length + raidOrderChanges.value.length + newRaids.value.length + deletedRaids.value.length
+  let total = newCharacters.value.length + deletedCharacters.value.length + raidOrderChanges.value.length + newRaids.value.length + deletedRaids.value.length
+  if (hasScheduleChanges.value) total += 1
+  return total
 })
 
 // 드래그&드롭 기능
@@ -56,11 +66,13 @@ const {
 
 // 래핑된 드래그&드롭 함수들
 const onScheduleDrop = (event, party, raid, schedules, getCharacterRaids) => {
-  return originalOnScheduleDrop(event, party, raid, schedules, getCharacterRaids, isScheduleFinished)
+  const result = originalOnScheduleDrop(event, party, raid, schedules, getCharacterRaids, isScheduleFinished, markScheduleAsChanged)
+  return result
 }
 
 const onRightClick = (event, party, raid, characterIndex, schedules) => {
-  return originalOnRightClick(event, party, raid, characterIndex, schedules, toggleScheduleFinish, isScheduleFinished)
+  const result = originalOnRightClick(event, party, raid, characterIndex, schedules, toggleScheduleFinish, isScheduleFinished, markScheduleAsChanged)
+  return result
 }
 
 // 데이터 로드 함수들
@@ -74,6 +86,7 @@ const loadData = async () => {
     deletedCharacters.value = []
     modifiedCharacters.value = []
     raidOrderChanges.value = []
+    resetScheduleChanges()
     
     // 레이드 데이터 로드
     try {
@@ -93,6 +106,48 @@ const loadData = async () => {
       console.warn('캐릭터 API 실패, 기본값 사용:', err)
       Object.keys(characters).forEach(key => delete characters[key])
       Object.assign(characters, defaultCharacters)
+    }
+    
+    // 스케줄 데이터 로드
+    try {
+      const schedulesData = await scheduleApi.getAllSchedules()
+      
+      // 스케줄 데이터를 프론트엔드 형식으로 변환
+      const groupedSchedules = {}
+      const groupedFinish = {}
+      
+      schedulesData.forEach(schedule => {
+        const key = `${schedule.id}-${schedule.raidName}`
+        
+        // 스케줄 그룹화
+        if (!groupedSchedules[key]) {
+          groupedSchedules[key] = []
+        }
+        
+        groupedSchedules[key].push({
+          name: schedule.characterName,
+          scheduleId: Date.now() + Math.random(), // 임시 ID
+          raidName: schedule.raidName,
+          partyName: schedule.id,
+          // 캐릭터 정보는 characters에서 찾아서 추가
+          userId: findCharacterUserId(schedule.characterName),
+          isSupporter: findCharacterIsSupporter(schedule.characterName)
+        })
+        
+        // 완료 상태 설정
+        if (schedule.isFinish === 'Y') {
+          groupedFinish[key] = true
+        }
+      })
+      
+      // 상태 업데이트
+      schedules.value = groupedSchedules
+      scheduleFinish.value = groupedFinish
+      
+    } catch (err) {
+      console.warn('스케줄 API 실패, 빈 상태로 시작:', err)
+      schedules.value = {}
+      scheduleFinish.value = {}
     }
     
   } catch (error) {
@@ -197,7 +252,7 @@ const deleteRaid = (raidName) => {
       // 새로 추가된 레이드를 삭제하는 경우 - newRaids에서만 제거
       newRaids.value.splice(newRaidIndex, 1)
     } else {
-      // 기존 레이드를 삭제하는 경우 - deletedRaids에 추가
+      // 기존 레이를 삭제하는 경우 - deletedRaids에 추가
       deletedRaids.value.push(deletedRaid)
     }
     
@@ -264,6 +319,26 @@ const deleteCharacter = (userName, characterName) => {
   } else {
     console.warn('❌ 사용자를 찾을 수 없음:', userName)
   }
+}
+
+// 캐릭터 정보를 찾는 헬퍼 함수들
+const findCharacterUserId = (characterName) => {
+  for (const [userId, userCharacters] of Object.entries(characters)) {
+    if (userCharacters.some(char => char.name === characterName)) {
+      return userId
+    }
+  }
+  return 'Unknown' // 찾지 못한 경우 기본값
+}
+
+const findCharacterIsSupporter = (characterName) => {
+  for (const userCharacters of Object.values(characters)) {
+    const character = userCharacters.find(char => char.name === characterName)
+    if (character) {
+      return character.isSupporter
+    }
+  }
+  return false // 찾지 못한 경우 기본값
 }
 
 // 레이드 순서 변경 함수
@@ -385,7 +460,21 @@ const saveAll = async () => {
       }
     }
     
-    // 4. TODO: 스케줄 저장 기능 (추후 구현)
+    // 4. 스케줄 저장 (간단화된 로직)
+    if (hasScheduleChanges.value) {
+      try {
+        console.log('저장할 스케줄 데이터:', schedules.value)
+        console.log('저장할 완료 상태:', scheduleFinish.value)
+        
+        await scheduleApi.saveAllSchedules(schedules.value, scheduleFinish.value)
+        hasScheduleChanges.value = false // 저장 후 초기화
+        hasAnyChanges = true
+        savedItems.push('스케줄')
+      } catch (err) {
+        console.error('스케줄 저장 실패:', err)
+        throw new Error('스케줄 저장에 실패했습니다')
+      }
+    }
     
     // 결과 메시지 표시
     if (hasAnyChanges) {
@@ -400,6 +489,15 @@ const saveAll = async () => {
   } finally {
     isLoading.value = false
   }
+}
+
+// 스케줄 변경사항 추적 함수들
+const markScheduleAsChanged = () => {
+  hasScheduleChanges.value = true
+}
+
+const resetScheduleChanges = () => {
+  hasScheduleChanges.value = false
 }
 </script>
 
