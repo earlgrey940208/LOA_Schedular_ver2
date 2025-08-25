@@ -3,10 +3,12 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import ScheduleSection from '@/components/ScheduleSection.vue'
 import CharacterSection from '@/components/CharacterSection.vue'
+import UserScheduleSection from '@/components/UserScheduleSection.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorMessage from '@/components/ui/ErrorMessage.vue'
 import { raidApi, characterApi, scheduleApi } from '@/services/api'
-import { defaultParties, defaultCharacters, defaultRaids } from '@/utils/constants'
+import { userScheduleApi, userApi } from '@/services/api'
+import { defaultParties, defaultCharacters, defaultRaids, defaultUserSchedules, updateUserColors } from '@/utils/constants'
 import { useDragDrop } from '@/composables/useDragDrop'
 
 // API 로딩 및 에러 상태 (로컬에서 관리)
@@ -19,6 +21,8 @@ const parties = ref([...defaultParties])
 const characters = reactive({})
 const schedules = ref({})
 const scheduleFinish = ref({}) // 스케줄 완료 상태 관리 {party-raid: true/false}
+const userSchedules = ref({}) // 유저 일정 데이터
+const users = ref([]) // 유저 목록
 
 // 변경 추적
 const newCharacters = ref([]) // 새로 추가된 캐릭터들
@@ -28,6 +32,7 @@ const raidOrderChanges = ref([]) // 레이드 순서 변경 목록
 const newRaids = ref([]) // 새로 추가된 레이드들
 const deletedRaids = ref([]) // 삭제할 레이드 목록
 const hasScheduleChanges = ref(false) // 스케줄 변경 여부
+const hasUserScheduleChanges = ref(false) // 유저 일정 변경 여부
 
 // 변경사항이 있는지 확인하는 computed
 const hasChanges = computed(() => {
@@ -36,7 +41,8 @@ const hasChanges = computed(() => {
          raidOrderChanges.value.length > 0 || 
          newRaids.value.length > 0 || 
          deletedRaids.value.length > 0 ||
-         hasScheduleChanges.value
+         hasScheduleChanges.value ||
+         hasUserScheduleChanges.value
   
   return result
 })
@@ -44,6 +50,7 @@ const hasChanges = computed(() => {
 const totalChanges = computed(() => {
   let total = newCharacters.value.length + deletedCharacters.value.length + raidOrderChanges.value.length + newRaids.value.length + deletedRaids.value.length
   if (hasScheduleChanges.value) total += 1
+  if (hasUserScheduleChanges.value) total += 1
   return total
 })
 
@@ -87,6 +94,23 @@ const loadData = async () => {
     modifiedCharacters.value = []
     raidOrderChanges.value = []
     resetScheduleChanges()
+    hasUserScheduleChanges.value = false
+    
+    // 유저 데이터 로드 (다른 데이터보다 먼저 로드)
+    try {
+      const usersData = await userApi.getAllUsers()
+      users.value = usersData
+      // 유저 색상 정보 업데이트
+      updateUserColors(usersData)
+    } catch (err) {
+      console.warn('유저 API 실패, 기본값 사용:', err)
+      users.value = [
+        { name: '혀니', color: '#9d4edd' },
+        { name: '샷건', color: '#f4d03f' },
+        { name: '도당', color: '#85c1e9' }
+      ]
+      updateUserColors(users.value)
+    }
     
     // 레이드 데이터 로드
     try {
@@ -148,6 +172,15 @@ const loadData = async () => {
       console.warn('스케줄 API 실패, 빈 상태로 시작:', err)
       schedules.value = {}
       scheduleFinish.value = {}
+    }
+    
+    // 유저 일정 데이터 로드
+    try {
+      const userSchedulesData = await userScheduleApi.getAllUserSchedules()
+      userSchedules.value = userSchedulesData
+    } catch (err) {
+      console.warn('유저 일정 API 실패, 기본값 사용:', err)
+      userSchedules.value = { ...defaultUserSchedules }
     }
     
   } catch (error) {
@@ -476,6 +509,21 @@ const saveAll = async () => {
       }
     }
     
+    // 5. 유저 일정 저장
+    if (hasUserScheduleChanges.value) {
+      try {
+        console.log('저장할 유저 일정 데이터:', userSchedules.value)
+        
+        await userScheduleApi.saveAllUserSchedules(userSchedules.value)
+        hasUserScheduleChanges.value = false // 저장 후 초기화
+        hasAnyChanges = true
+        savedItems.push('유저 일정')
+      } catch (err) {
+        console.error('유저 일정 저장 실패:', err)
+        throw new Error('유저 일정 저장에 실패했습니다')
+      }
+    }
+    
     // 결과 메시지 표시
     if (hasAnyChanges) {
       alert(`저장이 완료되었습니다!\n저장된 항목: ${savedItems.join(', ')}`)
@@ -498,6 +546,29 @@ const markScheduleAsChanged = () => {
 
 const resetScheduleChanges = () => {
   hasScheduleChanges.value = false
+}
+
+// 유저 일정 관련 함수들
+const updateUserScheduleText = (userId, dayOfWeek, text) => {
+  if (!userSchedules.value[userId]) {
+    userSchedules.value[userId] = {}
+  }
+  if (!userSchedules.value[userId][dayOfWeek]) {
+    userSchedules.value[userId][dayOfWeek] = { text: '', isEnabled: true }
+  }
+  userSchedules.value[userId][dayOfWeek].text = text
+  hasUserScheduleChanges.value = true
+}
+
+const toggleUserScheduleEnabled = (userId, dayOfWeek) => {
+  if (!userSchedules.value[userId]) {
+    userSchedules.value[userId] = {}
+  }
+  if (!userSchedules.value[userId][dayOfWeek]) {
+    userSchedules.value[userId][dayOfWeek] = { text: '', isEnabled: true }
+  }
+  userSchedules.value[userId][dayOfWeek].isEnabled = !userSchedules.value[userId][dayOfWeek].isEnabled
+  hasUserScheduleChanges.value = true
 }
 </script>
 
@@ -544,6 +615,13 @@ const resetScheduleChanges = () => {
         @delete-character="deleteCharacter"
         @update:newCharacters="(value) => newCharacters = value"
         @update:deletedCharacters="(value) => deletedCharacters = value"
+      />
+      
+      <UserScheduleSection 
+        :userSchedules="userSchedules"
+        :users="users"
+        @update-schedule-text="updateUserScheduleText"
+        @toggle-enabled="toggleUserScheduleEnabled"
       />
       
       <div class="action-buttons">

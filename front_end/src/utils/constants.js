@@ -1,8 +1,22 @@
-// 유저별 색상 매핑
-export const userColors = {
+// 유저별 색상 매핑 (기본값 - API에서 동적으로 로드됨)
+export const defaultUserColors = {
   '혀니': '#9d4edd',
   '샷건': '#f4d03f',
   '도당': '#85c1e9'
+}
+
+// 동적으로 설정되는 유저 색상 (API에서 로드 후 업데이트됨)
+export let userColors = { ...defaultUserColors }
+
+// 유저 색상 업데이트 함수
+export const updateUserColors = (users) => {
+  const newColors = {}
+  users.forEach(user => {
+    newColors[user.name] = user.color
+  })
+  // 기존 userColors 객체를 업데이트
+  Object.keys(userColors).forEach(key => delete userColors[key])
+  Object.assign(userColors, newColors)
 }
 
 // 파티 목록
@@ -32,3 +46,32 @@ export const defaultRaids = [
   { name: '노브', seq: 3 },
   { name: '노르둠', seq: 4 }
 ]
+
+// 유저 일정 관련 상수
+export const weekDays = ['수', '목', '금', '토', '일', '월', '화']
+
+export const dayOfWeekMapping = {
+  '수': 'WEDNESDAY',
+  '목': 'THURSDAY', 
+  '금': 'FRIDAY',
+  '토': 'SATURDAY',
+  '일': 'SUNDAY',
+  '월': 'MONDAY',
+  '화': 'TUESDAY'
+}
+
+export const reverseDayMapping = {
+  'WEDNESDAY': '수',
+  'THURSDAY': '목',
+  'FRIDAY': '금',
+  'SATURDAY': '토',
+  'SUNDAY': '일',
+  'MONDAY': '월',
+  'TUESDAY': '화'
+}
+
+export const defaultUserSchedules = {
+  '혀니': {},
+  '도당': {},
+  '샷건': {}
+}

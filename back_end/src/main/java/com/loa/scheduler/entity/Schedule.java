@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 
 @Entity
-@Table(name = "Schedule")
+@Table(name = "raid_schedule")
 @IdClass(ScheduleId.class)
 public class Schedule {
     

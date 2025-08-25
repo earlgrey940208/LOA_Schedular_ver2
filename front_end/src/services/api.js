@@ -317,4 +317,192 @@ export const api = {
   schedule: scheduleApi
 }
 
+// 유저 API
+export const userApi = {
+  // 모든 유저 조회
+  getAllUsers: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/User`, fetchConfig)
+      const data = await handleResponse(response)
+      return data
+    } catch (error) {
+      console.error('Error fetching all users:', error)
+      // 기본 유저 데이터 반환
+      return [
+        { name: '혀니', color: '#9d4edd' },
+        { name: '샷건', color: '#f4d03f' },
+        { name: '도당', color: '#85c1e9' }
+      ]
+    }
+  },
+
+  // 특정 유저 조회
+  getUserByName: async (name) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/User/${encodeURIComponent(name)}`, fetchConfig)
+      return await handleResponse(response)
+    } catch (error) {
+      console.error(`Error fetching user ${name}:`, error)
+      throw error
+    }
+  },
+
+  // 유저 생성
+  createUser: async (userData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/User`, {
+        ...fetchConfig,
+        method: 'POST',
+        body: JSON.stringify(userData)
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error creating user:', error)
+      throw error
+    }
+  },
+
+  // 유저 수정
+  updateUser: async (name, userData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/User/${encodeURIComponent(name)}`, {
+        ...fetchConfig,
+        method: 'PUT',
+        body: JSON.stringify(userData)
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error updating user:', error)
+      throw error
+    }
+  },
+
+  // 유저 삭제
+  deleteUser: async (name) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/User/${encodeURIComponent(name)}`, {
+        ...fetchConfig,
+        method: 'DELETE'
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      throw error
+    }
+  }
+}
+
+// 유저 일정 API
+export const userScheduleApi = {
+  // 모든 유저 일정 조회
+  getAllUserSchedules: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/UserSchedule`, fetchConfig)
+      const data = await handleResponse(response)
+      return transformToFrontendFormat(data)
+    } catch (error) {
+      console.error('Error fetching all user schedules:', error)
+      return handleError(error, {})
+    }
+  },
+
+  // 특정 유저 일정 조회
+  getUserSchedules: async (userId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/UserSchedule/${encodeURIComponent(userId)}`, fetchConfig)
+      return await handleResponse(response)
+    } catch (error) {
+      console.error(`Error fetching user schedules for ${userId}:`, error)
+      throw error
+    }
+  },
+
+  // 일정 저장 (생성/업데이트)
+  saveUserSchedule: async (userId, dayOfWeek, scheduleData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/UserSchedule`, {
+        ...fetchConfig,
+        method: 'POST',
+        body: JSON.stringify({
+          userId,
+          dayOfWeek,
+          scheduleText: scheduleData.text || '',
+          enabled: scheduleData.isEnabled ? 'Y' : 'N'
+        })
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error saving user schedule:', error)
+      throw error
+    }
+  },
+
+  // 전체 일정 일괄 저장
+  saveAllUserSchedules: async (userSchedules) => {
+    try {
+      const scheduleList = transformToBackendFormat(userSchedules)
+      const response = await fetch(`${API_BASE_URL}/UserSchedule/batch`, {
+        ...fetchConfig,
+        method: 'POST',
+        body: JSON.stringify(scheduleList)
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error saving all user schedules:', error)
+      throw error
+    }
+  },
+
+  // 일정 삭제
+  deleteUserSchedule: async (userId, dayOfWeek) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/UserSchedule/${encodeURIComponent(userId)}/${encodeURIComponent(dayOfWeek)}`, {
+        ...fetchConfig,
+        method: 'DELETE'
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error deleting user schedule:', error)
+      throw error
+    }
+  }
+}
+
+// 백엔드 데이터를 프론트엔드 형식으로 변환
+const transformToFrontendFormat = (backendData) => {
+  const userSchedules = {}
+  
+  backendData.forEach(schedule => {
+    if (!userSchedules[schedule.userId]) {
+      userSchedules[schedule.userId] = {}
+    }
+    
+    userSchedules[schedule.userId][schedule.dayOfWeek] = {
+      text: schedule.scheduleText || '',
+      isEnabled: schedule.enabled === 'Y'
+    }
+  })
+  
+  return userSchedules
+}
+
+// 프론트엔드 데이터를 백엔드 형식으로 변환
+const transformToBackendFormat = (userSchedules) => {
+  const scheduleList = []
+  
+  Object.keys(userSchedules).forEach(userId => {
+    Object.keys(userSchedules[userId]).forEach(dayOfWeek => {
+      const schedule = userSchedules[userId][dayOfWeek]
+      scheduleList.push({
+        userId,
+        dayOfWeek,
+        scheduleText: schedule.text || '',
+        enabled: schedule.isEnabled ? 'Y' : 'N'
+      })
+    })
+  })
+  
+  return scheduleList
+}
+
 export default api
