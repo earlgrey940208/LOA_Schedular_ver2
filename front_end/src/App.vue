@@ -8,7 +8,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorMessage from '@/components/ui/ErrorMessage.vue'
 import { raidApi, characterApi, scheduleApi } from '@/services/api'
 import { userScheduleApi, userApi } from '@/services/api'
-import { defaultParties, defaultCharacters, defaultRaids, defaultUserSchedules, updateUserColors } from '@/utils/constants'
+import { defaultParties, defaultCharacters, defaultRaids, defaultUserSchedules, updateUserColors, dayOfWeekMapping } from '@/utils/constants'
 import { useDragDrop } from '@/composables/useDragDrop'
 
 // API 로딩 및 에러 상태 (로컬에서 관리)
@@ -33,6 +33,7 @@ const newRaids = ref([]) // 새로 추가된 레이드들
 const deletedRaids = ref([]) // 삭제할 레이드 목록
 const hasScheduleChanges = ref(false) // 스케줄 변경 여부
 const hasUserScheduleChanges = ref(false) // 유저 일정 변경 여부
+const changedUserSchedules = ref([]) // 변경된 유저 일정들만 추적
 
 // 변경사항이 있는지 확인하는 computed
 const hasChanges = computed(() => {
@@ -95,6 +96,7 @@ const loadData = async () => {
     raidOrderChanges.value = []
     resetScheduleChanges()
     hasUserScheduleChanges.value = false
+    changedUserSchedules.value = [] // 변경된 유저 일정 초기화
     
     // 유저 데이터 로드 (다른 데이터보다 먼저 로드)
     try {
@@ -413,6 +415,19 @@ const swapRaidOrder = (fromIndex, toIndex) => {
 const characterSectionRef = ref(null)
 
 const saveAll = async () => {
+  console.log('🟡 saveAll 함수 시작')
+  console.log('🟡 hasChanges:', hasChanges.value)
+  console.log('🟡 변경사항 체크:', {
+    newCharacters: newCharacters.value.length,
+    deletedCharacters: deletedCharacters.value.length,
+    raidOrderChanges: raidOrderChanges.value.length,
+    newRaids: newRaids.value.length,
+    deletedRaids: deletedRaids.value.length,
+    hasScheduleChanges: hasScheduleChanges.value,
+    hasUserScheduleChanges: hasUserScheduleChanges.value,
+    changedUserSchedules: changedUserSchedules.value.length
+  })
+  
   try {
     isLoading.value = true
     error.value = null
@@ -512,10 +527,11 @@ const saveAll = async () => {
     // 5. 유저 일정 저장
     if (hasUserScheduleChanges.value) {
       try {
-        console.log('저장할 유저 일정 데이터:', userSchedules.value)
+        console.log('저장할 유저 일정 데이터:', changedUserSchedules.value)
         
-        await userScheduleApi.saveAllUserSchedules(userSchedules.value)
+        await userScheduleApi.saveAllUserSchedules(changedUserSchedules.value)
         hasUserScheduleChanges.value = false // 저장 후 초기화
+        changedUserSchedules.value = [] // 변경된 일정 목록 초기화
         hasAnyChanges = true
         savedItems.push('유저 일정')
       } catch (err) {
@@ -526,15 +542,18 @@ const saveAll = async () => {
     
     // 결과 메시지 표시
     if (hasAnyChanges) {
+      console.log('✅ 저장 완료!')
       alert(`저장이 완료되었습니다!\n저장된 항목: ${savedItems.join(', ')}`)
     } else {
+      console.log('⚠️ 저장할 변경사항 없음')
       alert('저장할 변경사항이 없습니다.')
     }
     
   } catch (error) {
-    console.error('저장 실패:', error)
+    console.error('❌ 저장 실패:', error)
     error.value = error.message || '저장에 실패했습니다'
   } finally {
+    console.log('🟡 saveAll 함수 종료')
     isLoading.value = false
   }
 }
@@ -550,24 +569,78 @@ const resetScheduleChanges = () => {
 
 // 유저 일정 관련 함수들
 const updateUserScheduleText = (userId, dayOfWeek, text) => {
+  console.log('📝 updateUserScheduleText 호출:', { userId, dayOfWeek, text })
+  
+  // dayOfWeek는 이미 영어로 변환된 값 (WEDNESDAY, THURSDAY 등)
+  // 한글 키로 userSchedules에서 찾기 위해 역변환 필요
+  const koreanDay = Object.keys(dayOfWeekMapping).find(key => dayOfWeekMapping[key] === dayOfWeek)
+  
   if (!userSchedules.value[userId]) {
     userSchedules.value[userId] = {}
   }
-  if (!userSchedules.value[userId][dayOfWeek]) {
-    userSchedules.value[userId][dayOfWeek] = { text: '', isEnabled: true }
+  if (!userSchedules.value[userId][koreanDay]) {
+    userSchedules.value[userId][koreanDay] = { text: '', isEnabled: true }
   }
-  userSchedules.value[userId][dayOfWeek].text = text
+  userSchedules.value[userId][koreanDay].text = text
+  
+  // 변경된 일정 추적
+  const changeKey = `${userId}-${dayOfWeek}` // 이미 영어 값이므로 직접 사용
+  const existingIndex = changedUserSchedules.value.findIndex(item => `${item.userId}-${item.dayOfWeek}` === changeKey)
+  const scheduleData = {
+    userId,
+    dayOfWeek, // 이미 영어로 변환된 값 사용
+    scheduleText: text,
+    enabled: userSchedules.value[userId][koreanDay].isEnabled ? 'Y' : 'N'
+  }
+  
+  console.log('📝 scheduleData:', scheduleData)
+  
+  if (existingIndex >= 0) {
+    changedUserSchedules.value[existingIndex] = scheduleData
+  } else {
+    changedUserSchedules.value.push(scheduleData)
+  }
+  
+  console.log('📝 changedUserSchedules 현재 상태:', changedUserSchedules.value)
+  
   hasUserScheduleChanges.value = true
 }
 
 const toggleUserScheduleEnabled = (userId, dayOfWeek) => {
+  console.log('🔄 toggleUserScheduleEnabled 호출:', { userId, dayOfWeek })
+  
+  // dayOfWeek는 이미 영어로 변환된 값 (WEDNESDAY, THURSDAY 등)
+  // 한글 키로 userSchedules에서 찾기 위해 역변환 필요
+  const koreanDay = Object.keys(dayOfWeekMapping).find(key => dayOfWeekMapping[key] === dayOfWeek)
+  
   if (!userSchedules.value[userId]) {
     userSchedules.value[userId] = {}
   }
-  if (!userSchedules.value[userId][dayOfWeek]) {
-    userSchedules.value[userId][dayOfWeek] = { text: '', isEnabled: true }
+  if (!userSchedules.value[userId][koreanDay]) {
+    userSchedules.value[userId][koreanDay] = { text: '', isEnabled: true }
   }
-  userSchedules.value[userId][dayOfWeek].isEnabled = !userSchedules.value[userId][dayOfWeek].isEnabled
+  userSchedules.value[userId][koreanDay].isEnabled = !userSchedules.value[userId][koreanDay].isEnabled
+  
+  // 변경된 일정 추적
+  const changeKey = `${userId}-${dayOfWeek}` // 이미 영어 값이므로 직접 사용
+  const existingIndex = changedUserSchedules.value.findIndex(item => `${item.userId}-${item.dayOfWeek}` === changeKey)
+  const scheduleData = {
+    userId,
+    dayOfWeek, // 이미 영어로 변환된 값 사용
+    scheduleText: userSchedules.value[userId][koreanDay].text || '',
+    enabled: userSchedules.value[userId][koreanDay].isEnabled ? 'Y' : 'N'
+  }
+  
+  console.log('🔄 scheduleData:', scheduleData)
+  
+  if (existingIndex >= 0) {
+    changedUserSchedules.value[existingIndex] = scheduleData
+  } else {
+    changedUserSchedules.value.push(scheduleData)
+  }
+  
+  console.log('🔄 changedUserSchedules 현재 상태:', changedUserSchedules.value)
+  
   hasUserScheduleChanges.value = true
 }
 </script>

@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/User")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/user")
+@CrossOrigin(origins = "http://localhost:5173")
 public class UserController {
     
     @Autowired
@@ -20,11 +20,17 @@ public class UserController {
     // 모든 유저 조회
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
+        System.out.println("📋 getAllUsers API 호출됨");
         try {
+            System.out.println("📋 userRepository 상태: " + (userRepository != null ? "정상" : "null"));
             List<User> users = userRepository.findAll();
+            System.out.println("📋 조회된 유저 수: " + users.size());
             return ResponseEntity.ok(users);
         } catch (Exception e) {
+            System.err.println("❌ getAllUsers 에러 발생:");
             e.printStackTrace();
+            System.err.println("❌ 에러 메시지: " + e.getMessage());
+            System.err.println("❌ 에러 클래스: " + e.getClass().getName());
             return ResponseEntity.status(500).build();
         }
     }

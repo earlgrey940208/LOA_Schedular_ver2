@@ -30,7 +30,7 @@ public class UserSchedule {
     private String scheduleText;
     
     @NotNull(message = "활성화 상태는 필수입니다")
-    @Column(nullable = false)
+    @Column(nullable = false, name = "enabled")
     private String enabled = "Y";
     
     @CreatedDate

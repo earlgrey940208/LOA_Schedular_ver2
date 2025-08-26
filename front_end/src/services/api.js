@@ -322,7 +322,7 @@ export const userApi = {
   // 모든 유저 조회
   getAllUsers: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/User`, fetchConfig)
+      const response = await fetch(`${API_BASE_URL}/user`, fetchConfig)
       const data = await handleResponse(response)
       return data
     } catch (error) {
@@ -339,7 +339,7 @@ export const userApi = {
   // 특정 유저 조회
   getUserByName: async (name) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/User/${encodeURIComponent(name)}`, fetchConfig)
+      const response = await fetch(`${API_BASE_URL}/user/${encodeURIComponent(name)}`, fetchConfig)
       return await handleResponse(response)
     } catch (error) {
       console.error(`Error fetching user ${name}:`, error)
@@ -350,7 +350,7 @@ export const userApi = {
   // 유저 생성
   createUser: async (userData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/User`, {
+      const response = await fetch(`${API_BASE_URL}/user`, {
         ...fetchConfig,
         method: 'POST',
         body: JSON.stringify(userData)
@@ -365,7 +365,7 @@ export const userApi = {
   // 유저 수정
   updateUser: async (name, userData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/User/${encodeURIComponent(name)}`, {
+      const response = await fetch(`${API_BASE_URL}/user/${encodeURIComponent(name)}`, {
         ...fetchConfig,
         method: 'PUT',
         body: JSON.stringify(userData)
@@ -380,7 +380,7 @@ export const userApi = {
   // 유저 삭제
   deleteUser: async (name) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/User/${encodeURIComponent(name)}`, {
+      const response = await fetch(`${API_BASE_URL}/user/${encodeURIComponent(name)}`, {
         ...fetchConfig,
         method: 'DELETE'
       })
@@ -440,12 +440,11 @@ export const userScheduleApi = {
   // 전체 일정 일괄 저장
   saveAllUserSchedules: async (userSchedules) => {
     try {
-      const scheduleList = transformToBackendFormat(userSchedules)
       const response = await fetch(`${API_BASE_URL}/UserSchedule/batch`, {
-        ...fetchConfig,
-        method: 'POST',
-        body: JSON.stringify(scheduleList)
-      })
+      ...fetchConfig,
+      method: 'POST',
+      body: JSON.stringify(userSchedules)  // 직접 전송
+    })
       return await handleResponse(response)
     } catch (error) {
       console.error('Error saving all user schedules:', error)
