@@ -295,10 +295,6 @@ defineExpose({
   transition: background-color 0.2s;
 }
 
-.character-tags:hover {
-  background-color: rgba(102, 126, 234, 0.05);
-}
-
 .character-tag {
   display: inline-block;
   padding: 0.5rem 1rem;
@@ -316,11 +312,6 @@ defineExpose({
   cursor: grabbing;
 }
 
-.character-tag:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
 .character-tag.supporter {
   text-decoration: underline;
 }
@@ -330,11 +321,6 @@ defineExpose({
   cursor: move !important;
   filter: grayscale(100%);
   pointer-events: auto;
-}
-
-.character-tag.disabled:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .character-tag.disabled:before {
@@ -370,19 +356,6 @@ defineExpose({
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.character-tag:hover .delete-btn {
-  opacity: 1;
-}
-
-.delete-btn:hover {
-  background-color: rgba(220, 53, 69, 1);
-  transform: scale(1.1);
-}
-
-.character-tag.disabled:hover .delete-btn {
-  opacity: 1;
-}
-
 .add-btn {
   background-color: #e9ecef;
   border: none;
@@ -396,10 +369,6 @@ defineExpose({
   font-size: 1.2rem;
   color: #6c757d;
   transition: background-color 0.2s;
-}
-
-.add-btn:hover {
-  background-color: #dee2e6;
 }
 
 .new-character-input {
@@ -419,11 +388,6 @@ defineExpose({
 .drag-target {
   cursor: move;
   transition: all 0.2s ease;
-}
-
-.drag-target:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .drag-target:active {

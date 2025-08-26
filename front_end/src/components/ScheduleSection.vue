@@ -121,6 +121,29 @@ const cancelAddingRaid = () => {
 const deleteRaid = (raidName) => {
   emit('delete-raid', raidName)
 }
+
+// Hover 관련 함수들
+const onHeaderHover = (raidIndex, isEnter) => {
+  const cells = document.querySelectorAll(`.raid-cell[data-raid-index="${raidIndex}"]`)
+  cells.forEach(cell => {
+    if (isEnter) {
+      cell.classList.add('column-hover')
+    } else {
+      cell.classList.remove('column-hover')
+    }
+  })
+}
+
+const onPartyHover = (partyIndex, isEnter) => {
+  const cells = document.querySelectorAll(`.raid-cell[data-party-index="${partyIndex}"]`)
+  cells.forEach(cell => {
+    if (isEnter) {
+      cell.classList.add('row-hover')
+    } else {
+      cell.classList.remove('row-hover')
+    }
+  })
+}
 </script>
 
 <template>
@@ -139,6 +162,8 @@ const deleteRaid = (raidName) => {
               @dragstart="onRaidDragStart($event, raid, index)"
               @dragover="onDragOver"
               @drop="onRaidDrop($event, index, raids)"
+              @mouseenter="onHeaderHover(index, true)"
+              @mouseleave="onHeaderHover(index, false)"
             >
               {{ raid.name || raid }}
               <button 
@@ -179,11 +204,13 @@ const deleteRaid = (raidName) => {
             @dragover="onDragOver"
             @drop="onPartyDrop($event, index, parties)"
           >
-            <td class="party-cell">{{ party }}</td>
+            <td class="party-cell" @mouseenter="onPartyHover(index, true)" @mouseleave="onPartyHover(index, false)">{{ party }}</td>
             <td 
-              v-for="raid in raids" 
+              v-for="(raid, raidIndex) in raids" 
               :key="raid.name || raid" 
               class="raid-cell"
+              :data-raid-index="raidIndex"
+              :data-party-index="index"
               :class="{ 
                 'finished': isScheduleFinished(party, raid.name || raid),
                 'readonly': isScheduleFinished(party, raid.name || raid)
@@ -266,13 +293,17 @@ const deleteRaid = (raidName) => {
   transition: background-color 0.3s ease;
 }
 
-.raid-cell:hover {
-  background-color: #f8f9fa;
+.raid-cell.column-hover {
+  background-color: rgba(102, 126, 234, 0.3);
+}
+
+.raid-cell.row-hover {
+  background-color: rgba(102, 126, 234, 0.3);
 }
 
 .raid-cell.finished {
   background-color: #e9ecef;
-  border-color: #adb5bd;
+  /* border-color: #adb5bd; */
 }
 
 .raid-cell.finished:hover {
@@ -410,28 +441,8 @@ const deleteRaid = (raidName) => {
   user-select: none;
 }
 
-.draggable-header:hover {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4c9a 100%) !important;
-}
-
 .draggable-row {
   cursor: move;
   user-select: none;
-}
-
-.draggable-row:hover {
-  background-color: rgba(102, 126, 234, 0.1);
-}
-
-.draggable-row:hover .party-cell {
-  background-color: rgba(102, 126, 234, 0.2);
-}
-
-.schedule-table th:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.draggable-row:hover td {
-  border-color: #667eea;
 }
 </style>
