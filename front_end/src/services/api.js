@@ -397,7 +397,7 @@ export const userScheduleApi = {
   // 모든 유저 일정 조회
   getAllUserSchedules: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/UserSchedule`, fetchConfig)
+      const response = await fetch(`${API_BASE_URL}/user_schedule`, fetchConfig)
       const data = await handleResponse(response)
       return transformToFrontendFormat(data)
     } catch (error) {
@@ -409,7 +409,7 @@ export const userScheduleApi = {
   // 특정 유저 일정 조회
   getUserSchedules: async (userId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/UserSchedule/${encodeURIComponent(userId)}`, fetchConfig)
+      const response = await fetch(`${API_BASE_URL}/user_schedule/${encodeURIComponent(userId)}`, fetchConfig)
       return await handleResponse(response)
     } catch (error) {
       console.error(`Error fetching user schedules for ${userId}:`, error)
@@ -420,7 +420,7 @@ export const userScheduleApi = {
   // 일정 저장 (생성/업데이트)
   saveUserSchedule: async (userId, dayOfWeek, scheduleData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/UserSchedule`, {
+      const response = await fetch(`${API_BASE_URL}/user_schedule`, {
         ...fetchConfig,
         method: 'POST',
         body: JSON.stringify({
@@ -440,7 +440,7 @@ export const userScheduleApi = {
   // 전체 일정 일괄 저장
   saveAllUserSchedules: async (userSchedules) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/UserSchedule/batch`, {
+      const response = await fetch(`${API_BASE_URL}/user_schedule/batch`, {
       ...fetchConfig,
       method: 'POST',
       body: JSON.stringify(userSchedules)  // 직접 전송
@@ -455,7 +455,7 @@ export const userScheduleApi = {
   // 일정 삭제
   deleteUserSchedule: async (userId, dayOfWeek) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/UserSchedule/${encodeURIComponent(userId)}/${encodeURIComponent(dayOfWeek)}`, {
+      const response = await fetch(`${API_BASE_URL}/user_schedule/${encodeURIComponent(userId)}/${encodeURIComponent(dayOfWeek)}`, {
         ...fetchConfig,
         method: 'DELETE'
       })
