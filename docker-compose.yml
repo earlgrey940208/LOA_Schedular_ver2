@@ -14,7 +14,7 @@ services:
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     ports:
-      - "19012:3306"
+      - "0.0.0.0:19012:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -40,12 +40,12 @@ services:
         condition: service_healthy  # ← 이 부분이 핵심!
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:mariadb://1.213.234.164:19012/loa_scheduler
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/loa_scheduler
       SPRING_DATASOURCE_USERNAME: user_app
       SPRING_DATASOURCE_PASSWORD: qlso
       SERVER_PORT: 19013
     ports:
-      - "19013:19013"
+      - "0.0.0.0:19013:19013"
     networks:
       - loa-network
     # Spring Boot 헬스체크 (권장)
@@ -67,7 +67,7 @@ services:
       backend:
         condition: service_healthy  # ← 백엔드 API 준비 완료 후 시작
     ports:
-      - "19014:5173"
+      - "0.0.0.0:19014:5173"
     networks:
       - loa-network
     # Nginx 헬스체크 (선택)

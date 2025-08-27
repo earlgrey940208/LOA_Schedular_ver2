@@ -11,7 +11,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/raid")
-@CrossOrigin(origins = {"http://localhost:19014", "http://192.168.219.100:19014"})
+@CrossOrigin(origins = {"http://localhost:19014", "http://192.168.219.100:19014", "http://192.168.219.103:19014", "http://1.213.234.164:19014"})
 public class RaidController {
     
     @Autowired
