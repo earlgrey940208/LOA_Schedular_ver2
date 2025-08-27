@@ -12,7 +12,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/Schedule")
-@CrossOrigin(origins = "http://localhost:19014")
+@CrossOrigin(origins = {"http://localhost:19014", "http://192.168.219.100:19014"})
 public class ScheduleController {
     
     @Autowired

@@ -10,18 +10,19 @@ public class Charactors {
     
     @Id
     @NotBlank(message = "캐릭터 이름은 필수입니다")
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false)
     private String name;
     
     @NotNull(message = "서포터 여부는 필수입니다")
-    @Column(nullable = false)
+    @Column(name = "is_supporter", nullable = false)
     private String isSupporter;
     
     @NotBlank(message = "사용자 ID는 필수입니다")
-    @Column(nullable = false)
+    @Column(name = "user_id", nullable = false)
     private String userId;
     
-    @Column(nullable = false)
+    // @Column(nullable = false)
+    @Column(name = "seq", nullable = false)
     private Integer seq;
     
     // 기본 생성자

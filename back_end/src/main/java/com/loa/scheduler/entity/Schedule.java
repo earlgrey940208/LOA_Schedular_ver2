@@ -23,7 +23,7 @@ public class Schedule {
     @Column(name = "character_name", nullable = false)
     private String characterName;
     
-    @Column(name = "isFinish", nullable = false)
+    @Column(name = "is_finish", nullable = false)
     private String isFinish = "N"; // 'Y' 또는 'N'
     
     // 기본 생성자
