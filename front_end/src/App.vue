@@ -8,7 +8,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorMessage from '@/components/ui/ErrorMessage.vue'
 import { raidApi, characterApi, scheduleApi } from '@/services/api'
 import { userScheduleApi, userApi } from '@/services/api'
-import { defaultParties, defaultCharacters, defaultRaids, defaultUserSchedules, updateUserColors, dayOfWeekMapping } from '@/utils/constants'
+import { defaultParties, defaultCharacters, defaultRaids, defaultUserSchedules, updateUserColors, dayOfWeekMapping, reverseDayMapping } from '@/utils/constants'
 import { useDragDrop } from '@/composables/useDragDrop'
 
 // API 로딩 및 에러 상태 (로컬에서 관리)
@@ -610,8 +610,10 @@ const toggleUserScheduleEnabled = (userId, dayOfWeek) => {
   console.log('🔄 toggleUserScheduleEnabled 호출:', { userId, dayOfWeek })
   
   // dayOfWeek는 이미 영어로 변환된 값 (WEDNESDAY, THURSDAY 등)
-  // 한글 키로 userSchedules에서 찾기 위해 역변환 필요
-  const koreanDay = Object.keys(dayOfWeekMapping).find(key => dayOfWeekMapping[key] === dayOfWeek)
+  // 한글 키로 userSchedules에서 찾기 위해 역변환
+  const koreanDay = reverseDayMapping[dayOfWeek]
+  
+  console.log('🔄 변환된 한글 요일:', koreanDay)
   
   if (!userSchedules.value[userId]) {
     userSchedules.value[userId] = {}
@@ -619,14 +621,19 @@ const toggleUserScheduleEnabled = (userId, dayOfWeek) => {
   if (!userSchedules.value[userId][koreanDay]) {
     userSchedules.value[userId][koreanDay] = { text: '', isEnabled: true }
   }
-  userSchedules.value[userId][koreanDay].isEnabled = !userSchedules.value[userId][koreanDay].isEnabled
+  
+  // 현재 상태 토글
+  const currentEnabled = userSchedules.value[userId][koreanDay].isEnabled
+  userSchedules.value[userId][koreanDay].isEnabled = !currentEnabled
+  
+  console.log(`🔄 ${userId}의 ${koreanDay} 상태 변경: ${currentEnabled} → ${!currentEnabled}`)
   
   // 변경된 일정 추적
-  const changeKey = `${userId}-${dayOfWeek}` // 이미 영어 값이므로 직접 사용
+  const changeKey = `${userId}-${dayOfWeek}`
   const existingIndex = changedUserSchedules.value.findIndex(item => `${item.userId}-${item.dayOfWeek}` === changeKey)
   const scheduleData = {
     userId,
-    dayOfWeek, // 이미 영어로 변환된 값 사용
+    dayOfWeek,
     scheduleText: userSchedules.value[userId][koreanDay].text || '',
     enabled: userSchedules.value[userId][koreanDay].isEnabled ? 'Y' : 'N'
   }

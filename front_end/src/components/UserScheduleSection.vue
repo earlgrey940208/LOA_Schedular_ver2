@@ -76,14 +76,14 @@ const getUserColor = (userId) => {
 
 // Methods
 const getSchedule = (userId, day) => {
-  const dayOfWeek = dayOfWeekMapping[day]
+  // day는 한글 요일 ('수', '목' 등)이므로 그대로 사용
   const defaultSchedule = { text: '', isEnabled: true }
   
   if (!props.userSchedules[userId]) {
     return defaultSchedule
   }
   
-  return props.userSchedules[userId][dayOfWeek] || defaultSchedule
+  return props.userSchedules[userId][day] || defaultSchedule
 }
 
 const updateScheduleText = (userId, day, text) => {
