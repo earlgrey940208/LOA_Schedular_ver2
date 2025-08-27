@@ -17,7 +17,7 @@ public interface UserScheduleRepository extends JpaRepository<UserSchedule, Long
     
     void deleteByUserId(String userId);
     
-    @Query("SELECT us FROM UserSchedule us ORDER BY us.userId, " +
+    @Query("SELECT us FROM UserSchedule us JOIN User u ON us.userId = u.name ORDER BY u.seq, " +
            "CASE us.dayOfWeek " +
            "WHEN 'WEDNESDAY' THEN 1 " +
            "WHEN 'THURSDAY' THEN 2 " +

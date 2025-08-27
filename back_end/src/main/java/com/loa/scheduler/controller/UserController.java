@@ -23,7 +23,7 @@ public class UserController {
         System.out.println("📋 getAllUsers API 호출됨");
         try {
             System.out.println("📋 userRepository 상태: " + (userRepository != null ? "정상" : "null"));
-            List<User> users = userRepository.findAll();
+            List<User> users = userRepository.findAllOrderBySeq();
             System.out.println("📋 조회된 유저 수: " + users.size());
             return ResponseEntity.ok(users);
         } catch (Exception e) {

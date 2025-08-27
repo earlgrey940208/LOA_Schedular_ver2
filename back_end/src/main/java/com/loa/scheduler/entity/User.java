@@ -20,6 +20,9 @@ public class User {
     @Column(nullable = true, name = "color")
     private String color;
     
+    @Column(name = "seq", nullable = false)
+    private Integer seq;
+    
     @CreatedDate
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -34,6 +37,12 @@ public class User {
     public User(String name, String color) {
         this.name = name;
         this.color = color;
+    }
+    
+    public User(String name, String color, Integer seq) {
+        this.name = name;
+        this.color = color;
+        this.seq = seq;
     }
     
     // Getter & Setter
@@ -51,6 +60,14 @@ public class User {
     
     public void setColor(String color) {
         this.color = color;
+    }
+    
+    public Integer getSeq() {
+        return seq;
+    }
+    
+    public void setSeq(Integer seq) {
+        this.seq = seq;
     }
     
     public LocalDateTime getCreatedAt() {

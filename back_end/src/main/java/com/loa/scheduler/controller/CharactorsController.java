@@ -17,10 +17,10 @@ public class CharactorsController {
     @Autowired
     private CharactorsRepository CharactorsRepository;
     
-    // 모든 캐릭터 조회
+    // 모든 캐릭터 조회 (user seq 순으로 정렬)
     @GetMapping
     public List<Charactors> getAllCharactors() {
-        return CharactorsRepository.findAll();
+        return CharactorsRepository.findAllOrderByUserSeqAndCharacterSeq();
     }
     
     // 사용자별 캐릭터 조회 (seq 순서대로)

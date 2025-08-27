@@ -17,4 +17,8 @@ public interface CharactorsRepository extends JpaRepository<Charactors, String> 
     
     @Query("SELECT MAX(c.seq) FROM Charactors c WHERE c.userId = :userId")
     Optional<Integer> findMaxSeqByUserId(@Param("userId") String userId);
+    
+    // user의 seq 순으로 캐릭터 정렬 (user seq -> character seq 순)
+    @Query("SELECT c FROM Charactors c JOIN User u ON c.userId = u.name ORDER BY u.seq ASC, c.seq ASC")
+    List<Charactors> findAllOrderByUserSeqAndCharacterSeq();
 }
