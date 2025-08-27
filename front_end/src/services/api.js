@@ -1,5 +1,7 @@
 // API 서비스 모듈
-const API_BASE_URL = 'http://localhost:8080/api'
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '/api'  // Docker/프로덕션 환경에서는 nginx proxy 사용
+  : 'http://localhost:19013/api'  // 개발 환경 (포트 19013로 변경)
 
 // 기본 fetch 설정
 const fetchConfig = {

@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # 데이터베이스 서비스
+  mariadb:
+    image: mariadb:10.6
+    container_name: loa-scheduler-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: loa_scheduler
+      MYSQL_USER: user_app
+      MYSQL_PASSWORD: qlso
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - loa-network
+    # MariaDB 헬스체크 (필수!)
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "user_app", "-pqlso"]
+      start_period: 60s    # 초기화 시간 증가
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # 백엔드 서비스 (Spring Boot)
+  backend:
+    build: 
+      context: ./back_end
+      dockerfile: Dockerfile
+    container_name: loa-backend
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy  # ← 이 부분이 핵심!
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/loa_scheduler
+      SPRING_DATASOURCE_USERNAME: user_app
+      SPRING_DATASOURCE_PASSWORD: qlso
+      SERVER_PORT: 19013
+    ports:
+      - "19013:19013"
+    networks:
+      - loa-network
+    # Spring Boot 헬스체크 (권장)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:19013/api/user"]
+      start_period: 60s    # Spring Boot 시작 대기시간
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # 프론트엔드 서비스 (Vue + Nginx)
+  frontend:
+    build: 
+      context: ./front_end
+      dockerfile: Dockerfile
+    container_name: loa-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy  # ← 백엔드 API 준비 완료 후 시작
+    ports:
+      - "5173:5173"
+    networks:
+      - loa-network
+    # Nginx 헬스체크 (선택)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mariadb_data:
+    driver: local
+
+networks:
+  loa-network:
+    driver: bridge
