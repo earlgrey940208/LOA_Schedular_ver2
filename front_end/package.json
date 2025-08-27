@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "serve": "vue-cli-service serve --port 19014",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },

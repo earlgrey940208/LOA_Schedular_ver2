@@ -11,7 +11,7 @@ export default defineConfig({
     vueDevTools(),
   ],
   server: {
-    port: 5173,  // 명시적으로 포트 5173 설정 (절대 변경 금지)
+    port: 19014,  // Docker 컨테이너 내부에서는 5173 포트 사용
     host: true   // Docker에서 외부 접근 허용
   },
   resolve: {
