@@ -472,37 +472,32 @@ export const userScheduleApi = {
 // 백엔드 데이터를 프론트엔드 형식으로 변환
 const transformToFrontendFormat = (backendData) => {
   const userSchedules = {}
-  
   backendData.forEach(schedule => {
     if (!userSchedules[schedule.userId]) {
       userSchedules[schedule.userId] = {}
     }
-    
+    // dayOfWeek는 한글로 저장됨
     userSchedules[schedule.userId][schedule.dayOfWeek] = {
       text: schedule.scheduleText || '',
       isEnabled: schedule.enabled === 'Y'
     }
   })
-  
   return userSchedules
 }
 
-// 프론트엔드 데이터를 백엔드 형식으로 변환
 const transformToBackendFormat = (userSchedules) => {
   const scheduleList = []
-  
   Object.keys(userSchedules).forEach(userId => {
     Object.keys(userSchedules[userId]).forEach(dayOfWeek => {
       const schedule = userSchedules[userId][dayOfWeek]
       scheduleList.push({
         userId,
-        dayOfWeek,
+        dayOfWeek, // 한글 요일 그대로 사용
         scheduleText: schedule.text || '',
         enabled: schedule.isEnabled ? 'Y' : 'N'
       })
     })
   })
-  
   return scheduleList
 }
 

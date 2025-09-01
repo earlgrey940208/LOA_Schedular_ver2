@@ -50,26 +50,6 @@ export const defaultRaids = [
 // 유저 일정 관련 상수
 export const weekDays = ['수', '목', '금', '토', '일', '월', '화']
 
-export const dayOfWeekMapping = {
-  '수': 'WEDNESDAY',
-  '목': 'THURSDAY', 
-  '금': 'FRIDAY',
-  '토': 'SATURDAY',
-  '일': 'SUNDAY',
-  '월': 'MONDAY',
-  '화': 'TUESDAY'
-}
-
-export const reverseDayMapping = {
-  'WEDNESDAY': '수',
-  'THURSDAY': '목',
-  'FRIDAY': '금',
-  'SATURDAY': '토',
-  'SUNDAY': '일',
-  'MONDAY': '월',
-  'TUESDAY': '화'
-}
-
 export const defaultUserSchedules = {
   '혀니': {},
   '도당': {},

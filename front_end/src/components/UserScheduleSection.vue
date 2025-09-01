@@ -45,7 +45,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { weekDays, dayOfWeekMapping, userColors } from '@/utils/constants'
+import { weekDays, userColors } from '@/utils/constants'
 
 // Props
 const props = defineProps({
@@ -87,13 +87,11 @@ const getSchedule = (userId, day) => {
 }
 
 const updateScheduleText = (userId, day, text) => {
-  const dayOfWeek = dayOfWeekMapping[day]
-  emit('update-schedule-text', userId, dayOfWeek, text)
+  emit('update-schedule-text', userId, day, text)
 }
 
 const toggleEnabled = (userId, day) => {
-  const dayOfWeek = dayOfWeekMapping[day]
-  emit('toggle-enabled', userId, dayOfWeek)
+  emit('toggle-enabled', userId, day)
 }
 </script>
 
