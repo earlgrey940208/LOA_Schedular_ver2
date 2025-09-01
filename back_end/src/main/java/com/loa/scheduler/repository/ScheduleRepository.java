@@ -39,4 +39,9 @@ public interface ScheduleRepository extends JpaRepository<Schedule, ScheduleId> 
     @Modifying
     @Query("UPDATE Schedule s SET s.isFinish = :isFinish WHERE s.id = :id AND s.raidName = :raidName")
     void updateIsFinishByIdAndRaidName(@Param("id") String id, @Param("raidName") String raidName, @Param("isFinish") String isFinish);
+    
+    // 모든 스케줄의 isFinish를 'N'으로 일괄 변경
+    @Modifying
+    @Query("UPDATE Schedule s SET s.isFinish = 'N'")
+    void updateAllIsFinishToN();
 }
