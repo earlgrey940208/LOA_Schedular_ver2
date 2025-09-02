@@ -20,7 +20,7 @@ export const updateUserColors = (users) => {
 }
 
 // 파티 목록
-export const defaultParties = ['1파티', '2파티', '3파티', '4파티', '5파티', '6파티']
+export const defaultParties = ['1파티', '2파티', '3파티', '4파티', '5파티', '6파티', '7파티']
 
 // 기본 캐릭터 데이터
 export const defaultCharacters = {
