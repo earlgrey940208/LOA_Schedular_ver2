@@ -15,7 +15,7 @@ public class WeeklyResetTask {
     private UserScheduleRepository userScheduleRepository;
 
     // 매주 수요일 오전 5시마다 실행
-    @Scheduled(cron = "0 0 5 ? * WED")
+    @Scheduled(cron = "0 0 5 ? * WED", zone = "Asia/Seoul")
     @Transactional
     public void resetSchedulesAndUserSchedules() {
         // 1. raid_schedule의 is_finish를 N으로 일괄 변경
