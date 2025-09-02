@@ -149,7 +149,7 @@ defineExpose({
 <template>
   <section class="character-section">
     <div class="section-header">
-      <h2>캐릭터 선택</h2>
+      <h2>🤸🏻‍♀️ 캐릭터 선택</h2>
       <div class="change-info" v-if="hasChanges">
         <span v-if="props.newCharacters.length > 0" class="new-count">
           새 캐릭터: {{ props.newCharacters.length }}개
