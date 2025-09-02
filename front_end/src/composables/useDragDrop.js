@@ -211,34 +211,12 @@ export function useDragDrop() {
     dragState.value = { type: null, data: null, sourceIndex: null, userName: null }
   }
 
-  // 우클릭 처리 - 캐릭터 삭제 또는 스케줄 완료 토글
+  // 우클릭 처리 - 스케줄 완료 토글만 (캐릭터 삭제는 더블클릭으로)
   const onRightClick = (event, party, raid, characterIndex, schedules, toggleScheduleFinish, isScheduleFinished, markScheduleAsChanged) => {
     event.preventDefault()
-    const key = `${party}-${raid}`
     
-    // schedules가 ref 객체인지 확인하고 .value로 접근
-    const schedulesData = schedules.value || schedules
-    
-    // 캐릭터가 있으면 캐릭터 삭제, 없으면 스케줄 완료 토글
-    if (characterIndex !== undefined && characterIndex !== null && schedulesData[key] && schedulesData[key][characterIndex]) {
-      // 스케줄이 완료된 상태면 캐릭터 삭제 불가
-      if (isScheduleFinished && isScheduleFinished(party, raid)) {
-        return
-      }
-      
-      // 캐릭터 삭제
-      schedulesData[key].splice(characterIndex, 1)
-      
-      // 배열이 비어있으면 키 삭제
-      if (schedulesData[key].length === 0) {
-        delete schedulesData[key]
-      }
-      
-      // 스케줄 변경사항 추적
-      if (markScheduleAsChanged) {
-        markScheduleAsChanged()
-      }
-    } else {
+    // 캐릭터가 있는 경우에도 우클릭은 무시하고, 빈 셀에서만 완료 상태 토글
+    if (characterIndex === undefined || characterIndex === null) {
       // 빈 셀이면 스케줄 완료 상태 토글
       if (toggleScheduleFinish) {
         toggleScheduleFinish(party, raid)

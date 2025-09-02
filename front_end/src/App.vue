@@ -83,6 +83,27 @@ const onRightClick = (event, party, raid, characterIndex, schedules) => {
   return result
 }
 
+// 스케줄에서 캐릭터 더블클릭 삭제 함수
+const onCharacterDoubleClick = (event, party, raid, characterIndex) => {
+  event.preventDefault()
+  event.stopPropagation()
+  
+  const key = `${party}-${raid}`
+  
+  if (schedules.value[key] && schedules.value[key][characterIndex]) {
+    // 캐릭터 삭제
+    schedules.value[key].splice(characterIndex, 1)
+    
+    // 배열이 비어있으면 키 삭제
+    if (schedules.value[key].length === 0) {
+      delete schedules.value[key]
+    }
+    
+    // 스케줄 변경사항 추적
+    markScheduleAsChanged()
+  }
+}
+
 // 데이터 로드 함수들
 const loadData = async () => {
   try {
@@ -644,6 +665,7 @@ const toggleUserScheduleEnabled = (userId, dayOfWeek) => {
         :onDragOver="onDragOver"
         :onScheduleDrop="onScheduleDrop"
         :onRightClick="onRightClick"
+        :onCharacterDoubleClick="onCharacterDoubleClick"
         :onRaidDragStart="onRaidDragStart"
         :onRaidDrop="onRaidDrop"
         :onPartyDragStart="onPartyDragStart"

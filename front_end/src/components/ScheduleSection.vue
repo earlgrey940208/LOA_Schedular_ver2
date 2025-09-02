@@ -47,6 +47,10 @@ const props = defineProps({
     type: Function,
     required: true
   },
+  onCharacterDoubleClick: {
+    type: Function,
+    required: true
+  },
   onRaidDragStart: {
     type: Function,
     required: true
@@ -74,12 +78,6 @@ const isAddingRaid = ref(false)
 // 스케줄 헬퍼 함수 - props에서 받은 함수 사용
 const getScheduledCharacters = (party, raid) => {
   return props.getScheduledCharacters(party, raid)
-}
-
-// 캐릭터 우클릭 헬퍼 함수 - 이벤트 전파 방지
-const onCharacterRightClick = (event, party, raid, index, schedules, toggleScheduleFinish, isScheduleFinished) => {
-  event.stopPropagation() // 셀 우클릭 이벤트로 전파 방지
-  props.onRightClick(event, party, raid, index, schedules, toggleScheduleFinish, isScheduleFinished)
 }
 
 // 셀 우클릭 헬퍼 함수 - 셀 배경에서 우클릭 시 완료 토글
@@ -226,7 +224,7 @@ const onPartyHover = (partyIndex, isEnter) => {
                   class="scheduled-character"
                   :style="{ backgroundColor: userColors[character.userId] }"
                   :class="{ supporter: character.isSupporter }"
-                  @contextmenu="onCharacterRightClick($event, party, raid.name || raid, index, schedules, toggleScheduleFinish, isScheduleFinished)"
+                  @dblclick="onCharacterDoubleClick($event, party, raid.name || raid, index)"
                 >
                   {{ character.name }}
                 </span>
