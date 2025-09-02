@@ -2,43 +2,92 @@
   <div class="user-schedule-section">
     <div class="section-header">
       <h2>📅 유저별 주간 일정</h2>
-      <p class="section-description">클릭: 일정입력 | 우클릭: 가능/불가능 변경</p>
+      <div class="header-controls">
+        <p class="section-description">클릭: 일정입력 | 우클릭: 가능/불가능 변경 | 매주 수요일 5시 자동 주차 전환</p>
+        <button class="advance-week-btn" @click="$emit('advance-week')" title="수동으로 주차 전환 실행 (2주차→1주차, 기존 1주차 삭제)">
+          주차 전환 (수동)
+        </button>
+      </div>
     </div>
     
-    <div class="schedule-table-container">
-      <table class="schedule-table">
-        <thead>
-          <tr>
-            <th class="user-column">유저</th>
-            <th v-for="day in weekDays" :key="day" class="day-column">{{ day }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="userId in userIds" :key="userId">
-            <td class="user-name" :style="{ color: getUserColor(userId) }">
-              {{ userId }}
-            </td>
-            <td v-for="day in weekDays" :key="`${userId}-${day}`" class="schedule-cell-container">
-              <div 
-                class="schedule-cell"
-                :class="{ 'disabled': !getSchedule(userId, day).isEnabled }"
-                @contextmenu.prevent="toggleEnabled(userId, day)"
-              >
-                <textarea
-                  v-model="getSchedule(userId, day).text"
-                  @input="updateScheduleText(userId, day, $event.target.value)"
-                  :disabled="!getSchedule(userId, day).isEnabled"
-                  class="schedule-input"
-                  rows="2"
-                />
-                <div v-if="!getSchedule(userId, day).isEnabled" class="disabled-overlay">
-                  게임 불가
+    <!-- 1주차 테이블 -->
+    <div class="week-section">
+      <h3 class="week-title">1주차 {{ weekInfo.week1DateRange }}</h3>
+      <div class="schedule-table-container">
+        <table class="schedule-table">
+          <thead>
+            <tr>
+              <th class="user-column">유저</th>
+              <th v-for="day in weekDays" :key="day" class="day-column">{{ day }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="userId in userIds" :key="userId">
+              <td class="user-name" :style="{ color: getUserColor(userId) }">
+                {{ userId }}
+              </td>
+              <td v-for="day in weekDays" :key="`week1-${userId}-${day}`" class="schedule-cell-container">
+                <div 
+                  class="schedule-cell"
+                  :class="{ 'disabled': !getSchedule(userId, day, 1).isEnabled }"
+                  @contextmenu.prevent="toggleEnabled(userId, day, 1)"
+                >
+                  <textarea
+                    v-model="getSchedule(userId, day, 1).text"
+                    @input="updateScheduleText(userId, day, 1, $event.target.value)"
+                    :disabled="!getSchedule(userId, day, 1).isEnabled"
+                    class="schedule-input"
+                    rows="2"
+                  />
+                  <div v-if="!getSchedule(userId, day, 1).isEnabled" class="disabled-overlay">
+                    게임 불가
+                  </div>
                 </div>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 2주차 테이블 -->
+    <div class="week-section">
+      <h3 class="week-title">2주차 {{ weekInfo.week2DateRange }}</h3>
+      <div class="schedule-table-container">
+        <table class="schedule-table">
+          <thead>
+            <tr>
+              <th class="user-column">유저</th>
+              <th v-for="day in weekDays" :key="day" class="day-column">{{ day }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="userId in userIds" :key="userId">
+              <td class="user-name" :style="{ color: getUserColor(userId) }">
+                {{ userId }}
+              </td>
+              <td v-for="day in weekDays" :key="`week2-${userId}-${day}`" class="schedule-cell-container">
+                <div 
+                  class="schedule-cell"
+                  :class="{ 'disabled': !getSchedule(userId, day, 2).isEnabled }"
+                  @contextmenu.prevent="toggleEnabled(userId, day, 2)"
+                >
+                  <textarea
+                    v-model="getSchedule(userId, day, 2).text"
+                    @input="updateScheduleText(userId, day, 2, $event.target.value)"
+                    :disabled="!getSchedule(userId, day, 2).isEnabled"
+                    class="schedule-input"
+                    rows="2"
+                  />
+                  <div v-if="!getSchedule(userId, day, 2).isEnabled" class="disabled-overlay">
+                    게임 불가
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
@@ -56,11 +105,36 @@ const props = defineProps({
   users: {
     type: Array,
     default: () => []
+  },
+  weekInfo: {
+    type: Object,
+    default: () => {
+      // 현재 날짜 기준으로 주차 정보 계산
+      const today = new Date()
+      const dayOfWeek = today.getDay()
+      const daysFromWednesday = (dayOfWeek + 4) % 7
+      const thisWednesday = new Date(today)
+      thisWednesday.setDate(today.getDate() - daysFromWednesday)
+      
+      const week1Start = new Date(thisWednesday)
+      const week1End = new Date(thisWednesday)
+      week1End.setDate(week1Start.getDate() + 6)
+      
+      const week2Start = new Date(week1Start)
+      week2Start.setDate(week1Start.getDate() + 7)
+      const week2End = new Date(week2Start)
+      week2End.setDate(week2Start.getDate() + 6)
+      
+      return {
+        week1DateRange: `${week1Start.getMonth()+1}/${week1Start.getDate()}~${week1End.getMonth()+1}/${week1End.getDate()}`,
+        week2DateRange: `${week2Start.getMonth()+1}/${week2Start.getDate()}~${week2End.getMonth()+1}/${week2End.getDate()}`
+      }
+    }
   }
 })
 
 // Emits
-const emit = defineEmits(['update-schedule-text', 'toggle-enabled'])
+const emit = defineEmits(['update-schedule-text', 'toggle-enabled', 'advance-week'])
 
 // Computed
 const userIds = computed(() => {
@@ -75,7 +149,7 @@ const getUserColor = (userId) => {
 }
 
 // Methods
-const getSchedule = (userId, day) => {
+const getSchedule = (userId, day, weekNumber) => {
   // day는 한글 요일 ('수', '목' 등)이므로 그대로 사용
   const defaultSchedule = { text: '', isEnabled: true }
   
@@ -83,15 +157,20 @@ const getSchedule = (userId, day) => {
     return defaultSchedule
   }
   
-  return props.userSchedules[userId][day] || defaultSchedule
+  const weekKey = `week${weekNumber}`
+  if (!props.userSchedules[userId][weekKey]) {
+    return defaultSchedule
+  }
+  
+  return props.userSchedules[userId][weekKey][day] || defaultSchedule
 }
 
-const updateScheduleText = (userId, day, text) => {
-  emit('update-schedule-text', userId, day, text)
+const updateScheduleText = (userId, day, weekNumber, text) => {
+  emit('update-schedule-text', userId, day, weekNumber, text)
 }
 
-const toggleEnabled = (userId, day) => {
-  emit('toggle-enabled', userId, day)
+const toggleEnabled = (userId, day, weekNumber) => {
+  emit('toggle-enabled', userId, day, weekNumber)
 }
 </script>
 
@@ -220,6 +299,41 @@ const toggleEnabled = (userId, day) => {
   font-weight: 600;
   pointer-events: none;
   z-index: 1;
+}
+
+.week-section {
+  margin-bottom: 2rem;
+}
+
+.week-title {
+  font-size: 1.2rem;
+  color: #495057;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.header-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.advance-week-btn {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.advance-week-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
 }
 
 /* 반응형 */

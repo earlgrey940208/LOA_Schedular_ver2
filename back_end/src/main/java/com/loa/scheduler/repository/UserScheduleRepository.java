@@ -15,9 +15,13 @@ public interface UserScheduleRepository extends JpaRepository<UserSchedule, Long
     
     Optional<UserSchedule> findByUserIdAndDayOfWeek(String userId, String dayOfWeek);
     
+    Optional<UserSchedule> findByUserIdAndDayOfWeekAndWeekNumber(String userId, String dayOfWeek, Integer weekNumber);
+    
+    List<UserSchedule> findByWeekNumber(Integer weekNumber);
+    
     void deleteByUserId(String userId);
     
-    @Query("SELECT us FROM UserSchedule us JOIN User u ON us.userId = u.name ORDER BY u.seq, " +
+    @Query("SELECT us FROM UserSchedule us JOIN User u ON us.userId = u.name ORDER BY u.seq, us.weekNumber, " +
            "CASE us.dayOfWeek " +
            "WHEN 'WEDNESDAY' THEN 1 " +
            "WHEN 'THURSDAY' THEN 2 " +

@@ -51,7 +51,16 @@ export const defaultRaids = [
 export const weekDays = ['수', '목', '금', '토', '일', '월', '화']
 
 export const defaultUserSchedules = {
-  '혀니': {},
-  '도당': {},
-  '샷건': {}
+  '혀니': {
+    week1: {},
+    week2: {}
+  },
+  '도당': {
+    week1: {},
+    week2: {}
+  },
+  '샷건': {
+    week1: {},
+    week2: {}
+  }
 }

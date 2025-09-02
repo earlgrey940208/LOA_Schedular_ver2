@@ -26,6 +26,9 @@ public class UserSchedule {
     @Column(nullable = false, name = "day_of_week")
     private String dayOfWeek;
     
+    @Column(name = "week_number", nullable = false)
+    private Integer weekNumber = 1; // 기본값 1주차
+    
     @Column(columnDefinition = "TEXT", name = "schedule_text")
     private String scheduleText;
     
@@ -44,9 +47,10 @@ public class UserSchedule {
     // 생성자
     public UserSchedule() {}
     
-    public UserSchedule(String userId, String dayOfWeek, String scheduleText, String enabled) {
+    public UserSchedule(String userId, String dayOfWeek, Integer weekNumber, String scheduleText, String enabled) {
         this.userId = userId;
         this.dayOfWeek = dayOfWeek;
+        this.weekNumber = weekNumber;
         this.scheduleText = scheduleText;
         this.enabled = enabled;
     }
@@ -74,6 +78,14 @@ public class UserSchedule {
     
     public void setDayOfWeek(String dayOfWeek) {
         this.dayOfWeek = dayOfWeek;
+    }
+    
+    public Integer getWeekNumber() {
+        return weekNumber;
+    }
+    
+    public void setWeekNumber(Integer weekNumber) {
+        this.weekNumber = weekNumber;
     }
     
     public String getScheduleText() {

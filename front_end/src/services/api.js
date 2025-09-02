@@ -466,18 +466,41 @@ export const userScheduleApi = {
       console.error('Error deleting user schedule:', error)
       throw error
     }
+  },
+
+  // 주차 전환 (2주차 → 1주차, 기존 1주차 삭제)
+  advanceWeek: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user_schedule/advance-week`, {
+        ...fetchConfig,
+        method: 'POST'
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error advancing week:', error)
+      throw error
+    }
   }
 }
 
-// 백엔드 데이터를 프론트엔드 형식으로 변환
+// 백엔드 데이터를 프론트엔드 형식으로 변환 (2주차 시스템)
 const transformToFrontendFormat = (backendData) => {
   const userSchedules = {}
   backendData.forEach(schedule => {
     if (!userSchedules[schedule.userId]) {
-      userSchedules[schedule.userId] = {}
+      userSchedules[schedule.userId] = {
+        week1: {},
+        week2: {}
+      }
     }
+    
+    const weekKey = `week${schedule.weekNumber || 1}`
+    if (!userSchedules[schedule.userId][weekKey]) {
+      userSchedules[schedule.userId][weekKey] = {}
+    }
+    
     // dayOfWeek는 한글로 저장됨
-    userSchedules[schedule.userId][schedule.dayOfWeek] = {
+    userSchedules[schedule.userId][weekKey][schedule.dayOfWeek] = {
       text: schedule.scheduleText || '',
       isEnabled: schedule.enabled === 'Y'
     }
@@ -488,14 +511,20 @@ const transformToFrontendFormat = (backendData) => {
 const transformToBackendFormat = (userSchedules) => {
   const scheduleList = []
   Object.keys(userSchedules).forEach(userId => {
-    Object.keys(userSchedules[userId]).forEach(dayOfWeek => {
-      const schedule = userSchedules[userId][dayOfWeek]
-      scheduleList.push({
-        userId,
-        dayOfWeek, // 한글 요일 그대로 사용
-        scheduleText: schedule.text || '',
-        enabled: schedule.isEnabled ? 'Y' : 'N'
-      })
+    Object.keys(userSchedules[userId]).forEach(weekKey => {
+      if (weekKey.startsWith('week')) {
+        const weekNumber = parseInt(weekKey.replace('week', ''))
+        Object.keys(userSchedules[userId][weekKey]).forEach(dayOfWeek => {
+          const schedule = userSchedules[userId][weekKey][dayOfWeek]
+          scheduleList.push({
+            userId,
+            dayOfWeek, // 한글 요일 그대로 사용
+            weekNumber,
+            scheduleText: schedule.text || '',
+            enabled: schedule.isEnabled ? 'Y' : 'N'
+          })
+        })
+      }
     })
   })
   return scheduleList

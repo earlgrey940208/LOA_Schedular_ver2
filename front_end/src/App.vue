@@ -35,6 +35,36 @@ const hasScheduleChanges = ref(false) // 스케줄 변경 여부
 const hasUserScheduleChanges = ref(false) // 유저 일정 변경 여부
 const changedUserSchedules = ref([]) // 변경된 유저 일정들만 추적
 
+// 2주차 시스템 지원 - 주차 정보 (현재 날짜 기준으로 계산)
+const calculateWeekInfo = () => {
+  const today = new Date()
+  const dayOfWeek = today.getDay() // 0=일요일, 1=월요일, ..., 6=토요일
+  
+  // 로스트아크 주간 리셋은 수요일이므로, 수요일을 기준으로 주차 계산
+  // 수요일(3)을 주의 시작점으로 설정
+  const daysFromWednesday = (dayOfWeek + 4) % 7 // 수요일부터의 경과 일수
+  const thisWednesday = new Date(today)
+  thisWednesday.setDate(today.getDate() - daysFromWednesday)
+  
+  // 1주차: 이번 주 수요일 ~ 다음 주 화요일
+  const week1Start = new Date(thisWednesday)
+  const week1End = new Date(thisWednesday)
+  week1End.setDate(week1Start.getDate() + 6)
+  
+  // 2주차: 다음 주 수요일 ~ 그 다음 주 화요일  
+  const week2Start = new Date(week1Start)
+  week2Start.setDate(week1Start.getDate() + 7)
+  const week2End = new Date(week2Start)
+  week2End.setDate(week2Start.getDate() + 6)
+  
+  return {
+    week1DateRange: `${week1Start.getMonth()+1}/${week1Start.getDate()}~${week1End.getMonth()+1}/${week1End.getDate()}`,
+    week2DateRange: `${week2Start.getMonth()+1}/${week2Start.getDate()}~${week2End.getMonth()+1}/${week2End.getDate()}`
+  }
+}
+
+const weekInfo = ref(calculateWeekInfo())
+
 // 변경사항이 있는지 확인하는 computed
 const hasChanges = computed(() => {
   const result = newCharacters.value.length > 0 || 
@@ -588,25 +618,34 @@ const resetScheduleChanges = () => {
   hasScheduleChanges.value = false
 }
 
-// 유저 일정 관련 함수들
-const updateUserScheduleText = (userId, dayOfWeek, text) => {
-  // dayOfWeek는 한글 요일로 바로 사용
+// 유저 일정 관련 함수들 (2주차 시스템)
+const updateUserScheduleText = (userId, dayOfWeek, weekNumber, text) => {
+  // 2주차 시스템에 맞게 데이터 구조 수정
   if (!userSchedules.value[userId]) {
     userSchedules.value[userId] = {}
   }
-  if (!userSchedules.value[userId][dayOfWeek]) {
-    userSchedules.value[userId][dayOfWeek] = { text: '', isEnabled: true }
+  
+  const weekKey = `week${weekNumber}`
+  if (!userSchedules.value[userId][weekKey]) {
+    userSchedules.value[userId][weekKey] = {}
   }
-  userSchedules.value[userId][dayOfWeek].text = text
+  if (!userSchedules.value[userId][weekKey][dayOfWeek]) {
+    userSchedules.value[userId][weekKey][dayOfWeek] = { text: '', isEnabled: true }
+  }
+  
+  userSchedules.value[userId][weekKey][dayOfWeek].text = text
 
   // 변경된 일정 추적
-  const changeKey = `${userId}-${dayOfWeek}`
-  const existingIndex = changedUserSchedules.value.findIndex(item => `${item.userId}-${item.dayOfWeek}` === changeKey)
+  const changeKey = `${userId}-${dayOfWeek}-week${weekNumber}`
+  const existingIndex = changedUserSchedules.value.findIndex(item => 
+    `${item.userId}-${item.dayOfWeek}-week${item.weekNumber}` === changeKey
+  )
   const scheduleData = {
     userId,
     dayOfWeek,
+    weekNumber,
     scheduleText: text,
-    enabled: userSchedules.value[userId][dayOfWeek].isEnabled ? 'Y' : 'N'
+    enabled: userSchedules.value[userId][weekKey][dayOfWeek].isEnabled ? 'Y' : 'N'
   }
   if (existingIndex >= 0) {
     changedUserSchedules.value[existingIndex] = scheduleData
@@ -616,25 +655,35 @@ const updateUserScheduleText = (userId, dayOfWeek, text) => {
   hasUserScheduleChanges.value = true
 }
 
-const toggleUserScheduleEnabled = (userId, dayOfWeek) => {
-  // dayOfWeek는 한글 요일로 바로 사용
+const toggleUserScheduleEnabled = (userId, dayOfWeek, weekNumber) => {
+  // 2주차 시스템에 맞게 데이터 구조 수정
   if (!userSchedules.value[userId]) {
     userSchedules.value[userId] = {}
   }
-  if (!userSchedules.value[userId][dayOfWeek]) {
-    userSchedules.value[userId][dayOfWeek] = { text: '', isEnabled: true }
+  
+  const weekKey = `week${weekNumber}`
+  if (!userSchedules.value[userId][weekKey]) {
+    userSchedules.value[userId][weekKey] = {}
   }
+  if (!userSchedules.value[userId][weekKey][dayOfWeek]) {
+    userSchedules.value[userId][weekKey][dayOfWeek] = { text: '', isEnabled: true }
+  }
+  
   // 현재 상태 토글
-  const currentEnabled = userSchedules.value[userId][dayOfWeek].isEnabled
-  userSchedules.value[userId][dayOfWeek].isEnabled = !currentEnabled
+  const currentEnabled = userSchedules.value[userId][weekKey][dayOfWeek].isEnabled
+  userSchedules.value[userId][weekKey][dayOfWeek].isEnabled = !currentEnabled
+  
   // 변경된 일정 추적
-  const changeKey = `${userId}-${dayOfWeek}`
-  const existingIndex = changedUserSchedules.value.findIndex(item => `${item.userId}-${item.dayOfWeek}` === changeKey)
+  const changeKey = `${userId}-${dayOfWeek}-week${weekNumber}`
+  const existingIndex = changedUserSchedules.value.findIndex(item => 
+    `${item.userId}-${item.dayOfWeek}-week${item.weekNumber}` === changeKey
+  )
   const scheduleData = {
     userId,
     dayOfWeek,
-    scheduleText: userSchedules.value[userId][dayOfWeek].text || '',
-    enabled: userSchedules.value[userId][dayOfWeek].isEnabled ? 'Y' : 'N'
+    weekNumber,
+    scheduleText: userSchedules.value[userId][weekKey][dayOfWeek].text || '',
+    enabled: userSchedules.value[userId][weekKey][dayOfWeek].isEnabled ? 'Y' : 'N'
   }
   if (existingIndex >= 0) {
     changedUserSchedules.value[existingIndex] = scheduleData
@@ -642,6 +691,43 @@ const toggleUserScheduleEnabled = (userId, dayOfWeek) => {
     changedUserSchedules.value.push(scheduleData)
   }
   hasUserScheduleChanges.value = true
+}
+
+// 주차 전환 함수 (백엔드 API 호출)
+const advanceWeek = async () => {
+  try {
+    console.log('주차 전환 API 호출 시작')
+    isLoading.value = true
+    
+    // 백엔드 API 호출하여 주차 전환 실행
+    await userScheduleApi.advanceWeek()
+    
+    // 백엔드에서 주차 전환이 완료되면 프론트엔드 데이터도 다시 로드
+    await loadUserSchedules()
+    
+    // 주차 정보 업데이트 (현재 날짜 기준으로 다시 계산)
+    weekInfo.value = calculateWeekInfo()
+    
+    console.log('주차 전환 완료')
+    alert('주차 전환이 완료되었습니다!')
+    
+  } catch (error) {
+    console.error('주차 전환 실패:', error)
+    alert('주차 전환에 실패했습니다: ' + error.message)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 유저 일정 데이터만 다시 로드하는 함수
+const loadUserSchedules = async () => {
+  try {
+    const userSchedulesData = await userScheduleApi.getAllUserSchedules()
+    userSchedules.value = userSchedulesData
+  } catch (err) {
+    console.warn('유저 일정 API 실패, 기본값 사용:', err)
+    userSchedules.value = { ...defaultUserSchedules }
+  }
 }
 </script>
 
@@ -694,8 +780,10 @@ const toggleUserScheduleEnabled = (userId, dayOfWeek) => {
       <UserScheduleSection 
         :userSchedules="userSchedules"
         :users="users"
+        :weekInfo="weekInfo"
         @update-schedule-text="updateUserScheduleText"
         @toggle-enabled="toggleUserScheduleEnabled"
+        @advance-week="advanceWeek"
       />
       
       <div class="action-buttons">

@@ -2,6 +2,7 @@ package com.loa.scheduler.controller;
 
 import com.loa.scheduler.entity.UserSchedule;
 import com.loa.scheduler.repository.UserScheduleRepository;
+import com.loa.scheduler.service.WeeklyScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,9 @@ public class UserScheduleController {
     
     @Autowired
     private UserScheduleRepository userScheduleRepository;
+    
+    @Autowired
+    private WeeklyScheduleService weeklyScheduleService;
     
     // 모든 유저 일정 조회
     @GetMapping
@@ -45,9 +49,18 @@ public class UserScheduleController {
     @PostMapping
     public ResponseEntity<UserSchedule> saveUserSchedule(@RequestBody UserSchedule userSchedule) {
         try {
-            // 기존 데이터 확인
+            // weekNumber가 없으면 기본값 1로 설정
+            if (userSchedule.getWeekNumber() == null) {
+                userSchedule.setWeekNumber(1);
+            }
+            
+            // 기존 데이터 확인 (userId, dayOfWeek, weekNumber로 찾기)
             Optional<UserSchedule> existing = userScheduleRepository
-                .findByUserIdAndDayOfWeek(userSchedule.getUserId(), userSchedule.getDayOfWeek());
+                .findByUserIdAndDayOfWeekAndWeekNumber(
+                    userSchedule.getUserId(), 
+                    userSchedule.getDayOfWeek(), 
+                    userSchedule.getWeekNumber()
+                );
             
             UserSchedule savedSchedule;
             if (existing.isPresent()) {
@@ -73,9 +86,18 @@ public class UserScheduleController {
     public ResponseEntity<String> saveAllUserSchedules(@RequestBody List<UserSchedule> userSchedules) {
         try {
             for (UserSchedule userSchedule : userSchedules) {
-                // 기존 데이터 확인
+                // weekNumber가 없으면 기본값 1로 설정
+                if (userSchedule.getWeekNumber() == null) {
+                    userSchedule.setWeekNumber(1);
+                }
+                
+                // 기존 데이터 확인 (userId, dayOfWeek, weekNumber로 찾기)
                 Optional<UserSchedule> existing = userScheduleRepository
-                    .findByUserIdAndDayOfWeek(userSchedule.getUserId(), userSchedule.getDayOfWeek());
+                    .findByUserIdAndDayOfWeekAndWeekNumber(
+                        userSchedule.getUserId(), 
+                        userSchedule.getDayOfWeek(), 
+                        userSchedule.getWeekNumber()
+                    );
                 
                 if (existing.isPresent()) {
                     // 업데이트
@@ -97,10 +119,14 @@ public class UserScheduleController {
     }
     
     // 특정 일정 삭제
-    @DeleteMapping("/{userId}/{dayOfWeek}")
-    public ResponseEntity<String> deleteUserSchedule(@PathVariable String userId, @PathVariable String dayOfWeek) {
+    @DeleteMapping("/{userId}/{dayOfWeek}/{weekNumber}")
+    public ResponseEntity<String> deleteUserSchedule(
+            @PathVariable String userId, 
+            @PathVariable String dayOfWeek, 
+            @PathVariable Integer weekNumber) {
         try {
-            Optional<UserSchedule> existing = userScheduleRepository.findByUserIdAndDayOfWeek(userId, dayOfWeek);
+            Optional<UserSchedule> existing = userScheduleRepository
+                .findByUserIdAndDayOfWeekAndWeekNumber(userId, dayOfWeek, weekNumber);
             if (existing.isPresent()) {
                 userScheduleRepository.delete(existing.get());
                 return ResponseEntity.ok("일정이 삭제되었습니다.");
@@ -110,6 +136,24 @@ public class UserScheduleController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body("일정 삭제에 실패했습니다.");
+        }
+    }
+    
+    // 기존 삭제 메서드 (하위 호환성)
+    @DeleteMapping("/{userId}/{dayOfWeek}")
+    public ResponseEntity<String> deleteUserScheduleOld(@PathVariable String userId, @PathVariable String dayOfWeek) {
+        return deleteUserSchedule(userId, dayOfWeek, 1); // 기본값으로 1주차
+    }
+    
+    // 수동 주차 전환 API
+    @PostMapping("/advance-week")
+    public ResponseEntity<String> advanceWeek() {
+        try {
+            weeklyScheduleService.manualAdvanceWeek();
+            return ResponseEntity.ok("주차 전환이 완료되었습니다.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("주차 전환에 실패했습니다: " + e.getMessage());
         }
     }
 }
