@@ -146,8 +146,13 @@ const onPartyHover = (partyIndex, isEnter) => {
 
 <template>
   <section class="schedule-section">
-    <h2>일정관리</h2>
-    <div class="schedule-table">
+    <div class="section-header">
+      <h2>⚔️ 레이드 일정관리</h2>
+      <p class="section-description">드래그&드롭: 캐릭터등록 | 우클릭: 레이드 완료여부 | 더블클릭: 캐릭터삭제</p>
+    </div>
+    
+    <div class="schedule-table-container">
+      <div class="schedule-table">
       <table>
         <thead>
           <tr>
@@ -235,6 +240,7 @@ const onPartyHover = (partyIndex, isEnter) => {
         </tbody>
       </table>
     </div>
+    </div>
   </section>
 </template>
 
@@ -242,15 +248,30 @@ const onPartyHover = (partyIndex, isEnter) => {
 .schedule-section {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   padding: 1.5rem;
   margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.schedule-section h2 {
-  margin: 0 0 1.5rem 0;
+.section-header {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.section-header h2 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
   font-size: 1.5rem;
-  color: #2c3e50;
+}
+
+.section-description {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.schedule-table-container {
+  overflow-x: auto;
 }
 
 .schedule-table table {
