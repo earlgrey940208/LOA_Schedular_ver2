@@ -11,7 +11,8 @@ import { userScheduleApi, userApi } from '@/services/api'
 import { defaultParties, defaultCharacters, defaultRaids, defaultUserSchedules, updateUserColors } from '@/utils/constants'
 import { calculateWeekInfo } from '@/utils/weekUtils'
 import { findCharacterUserId, findCharacterIsSupporter } from '@/utils/characterHelpers'
-import { getScheduledCharacters, getCharacterRaids, isCharacterMaxed } from '@/utils/scheduleHelpers'
+import { getScheduledCharacters, getCharacterRaids, isCharacterMaxed, isScheduleFinished as utilIsScheduleFinished, toggleScheduleFinish as utilToggleScheduleFinish, markScheduleAsChanged as utilMarkScheduleAsChanged, resetScheduleChanges as utilResetScheduleChanges } from '@/utils/scheduleHelpers'
+import { loadUserSchedules as utilLoadUserSchedules } from '@/utils/userScheduleHelpers'
 import { useDragDrop } from '@/composables/useDragDrop'
 
 // API 로딩 및 에러 상태 (로컬에서 관리)
@@ -237,15 +238,13 @@ const isCharacterMaxedWrapper = (characterName) => {
   return isCharacterMaxed(characterName, schedules.value)
 }
 
-// 스케줄 완료 상태 관리 함수들
+// 스케줄 완료 상태 관리 래핑 함수들
 const isScheduleFinished = (party, raid) => {
-  const key = `${party}-${raid}`
-  return scheduleFinish.value[key] || false
+  return utilIsScheduleFinished(party, raid, scheduleFinish.value)
 }
 
 const toggleScheduleFinish = (party, raid) => {
-  const key = `${party}-${raid}`
-  scheduleFinish.value[key] = !scheduleFinish.value[key]
+  utilToggleScheduleFinish(party, raid, scheduleFinish.value)
 }
 
 // 레이드 관련 함수들
@@ -552,13 +551,13 @@ const saveAll = async () => {
   }
 }
 
-// 스케줄 변경사항 추적 함수들
+// 스케줄 변경사항 추적 래핑 함수들
 const markScheduleAsChanged = () => {
-  hasScheduleChanges.value = true
+  utilMarkScheduleAsChanged(hasScheduleChanges)
 }
 
 const resetScheduleChanges = () => {
-  hasScheduleChanges.value = false
+  utilResetScheduleChanges(hasScheduleChanges)
 }
 
 // 유저 일정 관련 함수들 (2주차 시스템)
@@ -662,15 +661,9 @@ const advanceWeek = async () => {
   }
 }
 
-// 유저 일정 데이터만 다시 로드하는 함수
+// 유저 일정 데이터 로드 래핑 함수
 const loadUserSchedules = async () => {
-  try {
-    const userSchedulesData = await userScheduleApi.getAllUserSchedules()
-    userSchedules.value = userSchedulesData
-  } catch (err) {
-    console.warn('유저 일정 API 실패, 기본값 사용:', err)
-    userSchedules.value = { ...defaultUserSchedules }
-  }
+  await utilLoadUserSchedules(userSchedules)
 }
 </script>
 

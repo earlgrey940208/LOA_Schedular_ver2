@@ -22,3 +22,23 @@ export const getCharacterRaids = (characterName, schedules) => {
 export const isCharacterMaxed = (characterName, schedules) => {
   return getCharacterRaids(characterName, schedules).length >= 3
 }
+
+// 스케줄 완료 상태 관리 함수들
+export const isScheduleFinished = (party, raid, scheduleFinish) => {
+  const key = `${party}-${raid}`
+  return scheduleFinish[key] || false
+}
+
+export const toggleScheduleFinish = (party, raid, scheduleFinish) => {
+  const key = `${party}-${raid}`
+  scheduleFinish[key] = !scheduleFinish[key]
+}
+
+// 스케줄 변경 추적 함수들
+export const markScheduleAsChanged = (hasScheduleChanges) => {
+  hasScheduleChanges.value = true
+}
+
+export const resetScheduleChanges = (hasScheduleChanges) => {
+  hasScheduleChanges.value = false
+}
