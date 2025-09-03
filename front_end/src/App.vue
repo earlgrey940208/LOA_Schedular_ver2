@@ -1,19 +1,15 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import ScheduleSection from '@/components/ScheduleSection.vue'
 import CharacterSection from '@/components/CharacterSection.vue'
 import UserScheduleSection from '@/components/UserScheduleSection.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorMessage from '@/components/ui/ErrorMessage.vue'
-import { defaultCharacters, updateUserColors } from '@/utils/constants'
-import { calculateWeekInfo } from '@/utils/weekUtils'
-import { findCharacterUserId, findCharacterIsSupporter } from '@/utils/characterHelpers'
-import { getScheduledCharacters, getCharacterRaids, isCharacterMaxed, isScheduleFinished as utilIsScheduleFinished, toggleScheduleFinish as utilToggleScheduleFinish, markScheduleAsChanged as utilMarkScheduleAsChanged, resetScheduleChanges as utilResetScheduleChanges } from '@/utils/scheduleHelpers'
-import { loadUserSchedules as utilLoadUserSchedules } from '@/utils/userScheduleHelpers'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { useAppData } from '@/composables/useAppData'
 import { useApiIntegration } from '@/composables/useApiIntegration'
+import { useBusinessLogic } from '@/composables/useBusinessLogic'
 
 // 앱 데이터 관리 (컴포저블로 분리)
 const appData = useAppData()
@@ -63,30 +59,8 @@ const {
   advanceWeek
 } = useApiIntegration(appData)
 
-// 기존 코드 (나중에 제거예정)
-// const isLoading = ref(false)
-// const error = ref(null)
-// const raids = ref([])
-// const parties = ref([...defaultParties])
-// const characters = reactive({})
-// const schedules = ref({})
-// const scheduleFinish = ref({})
-// const userSchedules = ref({})
-// const users = ref([])
-// const newCharacters = ref([])
-// const deletedCharacters = ref([])
-// const modifiedCharacters = ref([])
-// const raidOrderChanges = ref([])
-// const newRaids = ref([])
-// const deletedRaids = ref([])
-// const hasScheduleChanges = ref(false)
-// const hasUserScheduleChanges = ref(false)
-// const changedUserSchedules = ref([])
-// const weekInfo = ref(calculateWeekInfo())
-// const hasChanges = computed(() => { ... })
-// const totalChanges = computed(() => { ... })
-
 // 드래그&드롭 기능
+const dragDropFunctions = useDragDrop()
 const {
   draggedCharacter,
   dragState,
@@ -98,507 +72,36 @@ const {
   onRaidDrop,
   onPartyDrop,
   onCharacterOrderDrop,
-  onScheduleDrop: originalOnScheduleDrop,
-  onRightClick: originalOnRightClick,
   resetDragState
-} = useDragDrop()
+} = dragDropFunctions
 
-// 래핑된 드래그&드롭 함수들
-const onScheduleDrop = (event, party, raid, schedules, getCharacterRaids) => {
-  const result = originalOnScheduleDrop(event, party, raid, schedules, getCharacterRaidsWrapper, isScheduleFinished, markScheduleAsChanged)
-  return result
-}
+// 비즈니스 로직 (컴포저블로 분리)
+const {
+  // 스케줄 관리
+  getScheduledCharactersWrapper,
+  getCharacterRaidsWrapper,
+  isCharacterMaxedWrapper,
+  isScheduleFinished,
+  toggleScheduleFinish,
+  markScheduleAsChanged,
+  onScheduleDrop,
+  onRightClick,
+  onCharacterDoubleClick,
+  // 캐릭터 관리
+  addCharacter,
+  deleteCharacter,
+  // 유저 일정 관리
+  updateUserScheduleText,
+  toggleUserScheduleEnabled
+} = useBusinessLogic(appData, dragDropFunctions)
 
-const onRightClick = (event, party, raid, characterIndex, schedules) => {
-  const result = originalOnRightClick(event, party, raid, characterIndex, schedules, toggleScheduleFinish, isScheduleFinished, markScheduleAsChanged)
-  return result
-}
-
-// 스케줄에서 캐릭터 더블클릭 삭제 함수
-const onCharacterDoubleClick = (event, party, raid, characterIndex) => {
-  event.preventDefault()
-  event.stopPropagation()
-  
-  const key = `${party}-${raid}`
-  
-  if (schedules.value[key] && schedules.value[key][characterIndex]) {
-    // 캐릭터 삭제
-    schedules.value[key].splice(characterIndex, 1)
-    
-    // 배열이 비어있으면 키 삭제
-    if (schedules.value[key].length === 0) {
-      delete schedules.value[key]
-    }
-    
-    // 스케줄 변경사항 추적
-    markScheduleAsChanged()
-  }
-}
-
-// 기존 loadData 함수는 useApiIntegration으로 이동
-/*
-const loadData = async () => {
-  try {
-    isLoading.value = true
-    error.value = null
-    
-    // 변경 추적 상태 초기화
-    newCharacters.value = []
-    deletedCharacters.value = []
-    modifiedCharacters.value = []
-    raidOrderChanges.value = []
-    resetDataScheduleChanges()
-    hasUserScheduleChanges.value = false
-    changedUserSchedules.value = [] // 변경된 유저 일정 초기화
-    
-    // 유저 데이터 로드 (다른 데이터보다 먼저 로드)
-    try {
-      const usersData = await userApi.getAllUsers()
-      users.value = usersData
-      // 유저 색상 정보 업데이트
-      updateUserColors(usersData)
-    } catch (err) {
-      console.warn('유저 API 실패, 기본값 사용:', err)
-      users.value = [
-        { name: '혀니', color: '#9d4edd' },
-        { name: '샷건', color: '#f4d03f' },
-        { name: '도당', color: '#85c1e9' }
-      ]
-      updateUserColors(users.value)
-    }
-    
-    // 레이드 데이터 로드
-    try {
-      const raidsData = await raidApi.getAllRaids()
-      raids.value = raidsData
-    } catch (err) {
-      console.warn('레이드 API 실패, 기본값 사용:', err)
-      raids.value = [...defaultRaids]
-    }
-    
-    // 캐릭터 데이터 로드
-    try {
-      const charactersData = await characterApi.getAllCharacters()
-      Object.keys(characters).forEach(key => delete characters[key])
-      Object.assign(characters, charactersData)
-    } catch (err) {
-      console.warn('캐릭터 API 실패, 기본값 사용:', err)
-      Object.keys(characters).forEach(key => delete characters[key])
-      Object.assign(characters, defaultCharacters)
-    }
-    
-    // 스케줄 데이터 로드
-    try {
-      const schedulesData = await scheduleApi.getAllSchedules()
-      
-      // 스케줄 데이터를 프론트엔드 형식으로 변환
-      const groupedSchedules = {}
-      const groupedFinish = {}
-      
-      schedulesData.forEach(schedule => {
-        const key = `${schedule.id}-${schedule.raidName}`
-        
-        // 스케줄 그룹화
-        if (!groupedSchedules[key]) {
-          groupedSchedules[key] = []
-        }
-        
-        groupedSchedules[key].push({
-          name: schedule.characterName,
-          scheduleId: Date.now() + Math.random(), // 임시 ID
-          raidName: schedule.raidName,
-          partyName: schedule.id,
-          // 캐릭터 정보는 characters에서 찾아서 추가
-          userId: findCharacterUserId(schedule.characterName, characters),
-          isSupporter: findCharacterIsSupporter(schedule.characterName, characters)
-        })
-        
-        // 완료 상태 설정
-        if (schedule.isFinish === 'Y') {
-          groupedFinish[key] = true
-        }
-      })
-      
-      // 상태 업데이트
-      schedules.value = groupedSchedules
-      scheduleFinish.value = groupedFinish
-      
-    } catch (err) {
-      console.warn('스케줄 API 실패, 빈 상태로 시작:', err)
-      schedules.value = {}
-      scheduleFinish.value = {}
-    }
-    
-    // 유저 일정 데이터 로드
-    try {
-      const userSchedulesData = await userScheduleApi.getAllUserSchedules()
-      userSchedules.value = userSchedulesData
-    } catch (err) {
-      console.warn('유저 일정 API 실패, 기본값 사용:', err)
-      userSchedules.value = { ...defaultUserSchedules }
-    }
-    
-  } catch (error) {
-    console.error('데이터 로드 실패:', error)
-    error.value = '데이터를 불러오는데 실패했습니다'
-  } finally {
-    isLoading.value = false
-  }
-}
-*/
+// 저장 함수 - CharacterSection에 캐릭터 저장을 위임하는 방식
+const characterSectionRef = ref(null)
 
 // 컴포넌트가 마운트될 때 데이터 가져오기
 onMounted(async () => {
   await loadData()
 })
-
-// 스케줄 관련 헬퍼 함수들 (래핑)
-const getScheduledCharactersWrapper = (party, raid) => {
-  return getScheduledCharacters(party, raid, schedules.value)
-}
-
-const getCharacterRaidsWrapper = (characterName) => {
-  return getCharacterRaids(characterName, schedules.value)
-}
-
-const isCharacterMaxedWrapper = (characterName) => {
-  return isCharacterMaxed(characterName, schedules.value)
-}
-
-// 스케줄 완료 상태 관리 래핑 함수들
-const isScheduleFinished = (party, raid) => {
-  return utilIsScheduleFinished(party, raid, scheduleFinish.value)
-}
-
-const toggleScheduleFinish = (party, raid) => {
-  utilToggleScheduleFinish(party, raid, scheduleFinish.value)
-}
-
-// 캐릭터 관련 함수들
-const addCharacter = async (userName, characterName) => {
-  try {
-    // 로컬 상태에만 추가 (서버 저장은 saveAll에서 일괄 처리)
-    if (!characters[userName]) {
-      characters[userName] = []
-    }
-    
-    // seq 계산: 해당 사용자의 기존 캐릭터 중 최대 seq + 1
-    const userCharacters = characters[userName]
-    const maxSeq = userCharacters.length > 0 
-      ? Math.max(...userCharacters.map(char => char.seq || 0))
-      : 0
-    
-    const newCharacter = {
-      name: characterName,
-      isSupporter: false, // 기본값
-      userId: userName,
-      seq: maxSeq + 1
-    }
-    
-    // 로컬 상태에 추가
-    characters[userName].push(newCharacter)
-    
-    // 새 캐릭터 목록에 추가 (서버 저장용)
-    newCharacters.value.push(newCharacter)
-    
-  } catch (error) {
-    console.error('캐릭터 추가 실패:', error)
-    error.value = '캐릭터 추가에 실패했습니다'
-  }
-}
-
-const deleteCharacter = (userName, characterName) => {
-  
-  const userCharacters = characters[userName]
-  if (userCharacters) {
-    const characterIndex = userCharacters.findIndex(char => char.name === characterName)
-    if (characterIndex !== -1) {
-      // 새로 추가된 캐릭터인지 확인
-      const newCharacterIndex = newCharacters.value.findIndex(char => char.name === characterName)
-      
-      if (newCharacterIndex !== -1) {
-        // 새로 추가된 캐릭터라면 newCharacters 목록에서만 제거 (서버 삭제 불필요)
-        newCharacters.value.splice(newCharacterIndex, 1)
-      } else {
-        // 기존 캐릭터라면 삭제 목록에 추가 (서버에서 삭제 필요)
-        deletedCharacters.value.push(characterName) // 이름만 저장
-      }
-      
-      // 로컬 상태에서 제거
-      userCharacters.splice(characterIndex, 1)
-    } else {
-      console.warn('❌ 캐릭터를 찾을 수 없음:', characterName)
-    }
-  } else {
-    console.warn('❌ 사용자를 찾을 수 없음:', userName)
-  }
-}
-
-// 저장 함수 - CharacterSection에 캐릭터 저장을 위임하는 방식
-const characterSectionRef = ref(null)
-
-// 기존 saveAll 함수는 useApiIntegration으로 이동
-/*
-const saveAll = async () => {
-  console.log('🟡 saveAll 함수 시작')
-  console.log('🟡 hasChanges:', hasChanges.value)
-  console.log('🟡 변경사항 체크:', {
-    newCharacters: newCharacters.value.length,
-    deletedCharacters: deletedCharacters.value.length,
-    raidOrderChanges: raidOrderChanges.value.length,
-    newRaids: newRaids.value.length,
-    deletedRaids: deletedRaids.value.length,
-    hasScheduleChanges: hasScheduleChanges.value,
-    hasUserScheduleChanges: hasUserScheduleChanges.value,
-    changedUserSchedules: changedUserSchedules.value.length
-  })
-  
-  try {
-    isLoading.value = true
-    error.value = null
-    
-    let hasAnyChanges = false
-    let savedItems = []
-    
-    // 1. 캐릭터 저장 (CharacterSection에 위임)
-    if (characterSectionRef.value) {
-      const hasCharacterChanges = await characterSectionRef.value.saveCharacters()
-      if (hasCharacterChanges) {
-        hasAnyChanges = true
-        savedItems.push('캐릭터')
-      }
-    }
-    
-    // 2. 레이드 추가/삭제 저장
-    if (newRaids.value.length > 0 || deletedRaids.value.length > 0) {
-      
-      // 새 레이드 추가 (seq 충돌 방지를 위해 미리 계산)
-      if (newRaids.value.length > 0) {
-        // 현재 저장된 레이드들만 고려 (newRaids는 제외)
-        const savedRaids = raids.value.filter(raid => 
-          !newRaids.value.some(newRaid => newRaid.name === raid.name)
-        )
-        
-        const currentMaxSeq = savedRaids.length > 0 
-          ? Math.max(...savedRaids.map(raid => raid.seq || 0))
-          : 0
-        
-        for (let i = 0; i < newRaids.value.length; i++) {
-          const raid = newRaids.value[i]
-          try {
-            // seq를 미리 계산해서 전송 (현재 최대값 + 인덱스 + 1)
-            const raidWithSeq = {
-              name: raid.name,
-              seq: currentMaxSeq + i + 1
-            }
-            await raidApi.createRaidWithSeq(raidWithSeq)
-          } catch (err) {
-            console.error('레이드 추가 실패:', raid.name, err)
-            throw new Error(`레이드 '${raid.name}' 추가에 실패했습니다`)
-          }
-        }
-      }
-      
-      // 레이드 삭제
-      for (const raid of deletedRaids.value) {
-        try {
-          await raidApi.deleteRaid(raid.name)
-        } catch (err) {
-          console.error('레이드 삭제 실패:', raid.name, err)
-          throw new Error(`레이드 '${raid.name}' 삭제에 실패했습니다`)
-        }
-      }
-      
-      // 변경 추적 초기화
-      newRaids.value = []
-      deletedRaids.value = []
-      
-      // 레이드 목록 다시 로드
-      await loadRaids()
-      
-      hasAnyChanges = true
-      savedItems.push('레이드')
-    }
-
-    // 3. 레이드 순서 저장
-    if (raidOrderChanges.value.length > 0) {
-      try {
-        await raidApi.updateRaidOrder(raidOrderChanges.value)
-        raidOrderChanges.value = [] // 저장 후 초기화
-        hasAnyChanges = true
-        savedItems.push('레이드 순서')
-      } catch (err) {
-        console.error('레이드 순서 저장 실패:', err)
-        throw new Error('레이드 순서 저장에 실패했습니다')
-      }
-    }
-    
-    // 4. 스케줄 저장 (간단화된 로직)
-    if (hasScheduleChanges.value) {
-      try {
-        console.log('저장할 스케줄 데이터:', schedules.value)
-        console.log('저장할 완료 상태:', scheduleFinish.value)
-        
-        await scheduleApi.saveAllSchedules(schedules.value, scheduleFinish.value)
-        hasScheduleChanges.value = false // 저장 후 초기화
-        hasAnyChanges = true
-        savedItems.push('스케줄')
-      } catch (err) {
-        console.error('스케줄 저장 실패:', err)
-        throw new Error('스케줄 저장에 실패했습니다')
-      }
-    }
-    
-    // 5. 유저 일정 저장
-    if (hasUserScheduleChanges.value) {
-      try {
-        console.log('저장할 유저 일정 데이터:', changedUserSchedules.value)
-        
-        await userScheduleApi.saveAllUserSchedules(changedUserSchedules.value)
-        hasUserScheduleChanges.value = false // 저장 후 초기화
-        changedUserSchedules.value = [] // 변경된 일정 목록 초기화
-        hasAnyChanges = true
-        savedItems.push('유저 일정')
-      } catch (err) {
-        console.error('유저 일정 저장 실패:', err)
-        throw new Error('유저 일정 저장에 실패했습니다')
-      }
-    }
-    
-    // 결과 메시지 표시
-    if (hasAnyChanges) {
-      console.log('✅ 저장 완료!')
-      alert(`저장이 완료되었습니다!\n저장된 항목: ${savedItems.join(', ')}`)
-    } else {
-      console.log('⚠️ 저장할 변경사항 없음')
-      alert('저장할 변경사항이 없습니다.')
-    }
-    
-  } catch (error) {
-    console.error('❌ 저장 실패:', error)
-    error.value = error.message || '저장에 실패했습니다'
-  } finally {
-    console.log('🟡 saveAll 함수 종료')
-    isLoading.value = false
-  }
-}
-*/
-
-// 스케줄 변경사항 추적 래핑 함수들
-const markScheduleAsChanged = () => {
-  utilMarkScheduleAsChanged(hasScheduleChanges)
-}
-
-// 기존 resetScheduleChanges 함수는 useAppData의 resetDataScheduleChanges로 대체됨
-
-// 유저 일정 관련 함수들 (2주차 시스템)
-const updateUserScheduleText = (userId, dayOfWeek, weekNumber, text) => {
-  // 2주차 시스템에 맞게 데이터 구조 수정
-  if (!userSchedules.value[userId]) {
-    userSchedules.value[userId] = {}
-  }
-  
-  const weekKey = `week${weekNumber}`
-  if (!userSchedules.value[userId][weekKey]) {
-    userSchedules.value[userId][weekKey] = {}
-  }
-  if (!userSchedules.value[userId][weekKey][dayOfWeek]) {
-    userSchedules.value[userId][weekKey][dayOfWeek] = { text: '', isEnabled: true }
-  }
-  
-  userSchedules.value[userId][weekKey][dayOfWeek].text = text
-
-  // 변경된 일정 추적
-  const changeKey = `${userId}-${dayOfWeek}-week${weekNumber}`
-  const existingIndex = changedUserSchedules.value.findIndex(item => 
-    `${item.userId}-${item.dayOfWeek}-week${item.weekNumber}` === changeKey
-  )
-  const scheduleData = {
-    userId,
-    dayOfWeek,
-    weekNumber,
-    scheduleText: text,
-    enabled: userSchedules.value[userId][weekKey][dayOfWeek].isEnabled ? 'Y' : 'N'
-  }
-  if (existingIndex >= 0) {
-    changedUserSchedules.value[existingIndex] = scheduleData
-  } else {
-    changedUserSchedules.value.push(scheduleData)
-  }
-  hasUserScheduleChanges.value = true
-}
-
-const toggleUserScheduleEnabled = (userId, dayOfWeek, weekNumber) => {
-  // 2주차 시스템에 맞게 데이터 구조 수정
-  if (!userSchedules.value[userId]) {
-    userSchedules.value[userId] = {}
-  }
-  
-  const weekKey = `week${weekNumber}`
-  if (!userSchedules.value[userId][weekKey]) {
-    userSchedules.value[userId][weekKey] = {}
-  }
-  if (!userSchedules.value[userId][weekKey][dayOfWeek]) {
-    userSchedules.value[userId][weekKey][dayOfWeek] = { text: '', isEnabled: true }
-  }
-  
-  // 현재 상태 토글
-  const currentEnabled = userSchedules.value[userId][weekKey][dayOfWeek].isEnabled
-  userSchedules.value[userId][weekKey][dayOfWeek].isEnabled = !currentEnabled
-  
-  // 변경된 일정 추적
-  const changeKey = `${userId}-${dayOfWeek}-week${weekNumber}`
-  const existingIndex = changedUserSchedules.value.findIndex(item => 
-    `${item.userId}-${item.dayOfWeek}-week${item.weekNumber}` === changeKey
-  )
-  const scheduleData = {
-    userId,
-    dayOfWeek,
-    weekNumber,
-    scheduleText: userSchedules.value[userId][weekKey][dayOfWeek].text || '',
-    enabled: userSchedules.value[userId][weekKey][dayOfWeek].isEnabled ? 'Y' : 'N'
-  }
-  if (existingIndex >= 0) {
-    changedUserSchedules.value[existingIndex] = scheduleData
-  } else {
-    changedUserSchedules.value.push(scheduleData)
-  }
-  hasUserScheduleChanges.value = true
-}
-
-// 기존 advanceWeek과 loadUserSchedules 함수는 useApiIntegration으로 이동
-/*
-// 주차 전환 함수 (백엔드 API 호출)
-const advanceWeek = async () => {
-  try {
-    console.log('주차 전환 API 호출 시작')
-    isLoading.value = true
-    
-    // 백엔드 API 호출하여 주차 전환 실행
-    await userScheduleApi.advanceWeek()
-    
-    // 백엔드에서 주차 전환이 완료되면 프론트엔드 데이터도 다시 로드
-    await loadUserSchedules()
-    
-    // 주차 정보 업데이트 (현재 날짜 기준으로 다시 계산)
-    weekInfo.value = calculateWeekInfo()
-    
-    console.log('주차 전환 완료')
-    alert('주차 전환이 완료되었습니다!')
-    
-  } catch (error) {
-    console.error('주차 전환 실패:', error)
-    alert('주차 전환에 실패했습니다: ' + error.message)
-  } finally {
-    isLoading.value = false
-  }
-}
-
-// 유저 일정 데이터 로드 래핑 함수
-const loadUserSchedules = async () => {
-  await utilLoadUserSchedules(userSchedules)
-}
-*/
 </script>
 
 <template>
