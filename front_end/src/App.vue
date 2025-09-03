@@ -36,26 +36,13 @@ const {
   weekInfo,
   // computed
   hasChanges,
-  totalChanges,
-  // 메서드
-  resetCharacterChanges,
-  resetRaidChanges,
-  resetDataScheduleChanges,
-  resetDataUserScheduleChanges,
-  resetAllChanges,
-  setLoading,
-  setError,
-  clearError,
-  updateWeekInfo
+  totalChanges
 } = appData
 
 // API 통신 로직 (컴포저블로 분리)
 const {
   loadData,
-  loadRaids,
-  saveCharacters,
   saveAll,
-  loadUserSchedules,
   advanceWeek
 } = useApiIntegration(appData)
 
