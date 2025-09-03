@@ -608,3 +608,19 @@ const transformToBackendFormat = (userSchedules) => {
 }
 
 export default api
+
+// 자동갱신을 위한 API
+export const getLastUpdated = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/last-updated`, fetchConfig)
+    const data = await handleResponse(response)
+    return new Date(data.timestamp).getTime()
+  } catch (error) {
+    console.warn('getLastUpdated 실패:', error)
+    // 실패시 현재 시간 반환 (갱신 방지)
+    return Date.now()
+  }
+}
+
+// API 객체에 함수 추가
+api.getLastUpdated = getLastUpdated

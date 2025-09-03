@@ -10,7 +10,7 @@ const debounce = (func, wait) => {
   }
 }
 
-export function useAutoSave() {
+export function useAutoSave(onSaveComplete = null) {
   // 저장 상태 관리
   const savingStates = ref({
     character: false,
@@ -25,6 +25,13 @@ export function useAutoSave() {
     userSchedule: null,
     raid: null
   })
+
+  // 저장 완료 시 콜백 호출
+  const handleSaveComplete = (type) => {
+    if (onSaveComplete) {
+      onSaveComplete(type)
+    }
+  }
 
   // 저장 상태 설정
   const setSavingState = (type, isSaving, error = null) => {
@@ -50,6 +57,7 @@ export function useAutoSave() {
       }
       
       setSavingState('character', false)
+      handleSaveComplete('character')
       console.log(`✅ [캐릭터 ${action}] 저장 완료:`, character.name)
     } catch (error) {
       setSavingState('character', false, error.message)
@@ -86,6 +94,7 @@ export function useAutoSave() {
       }
       
       setSavingState('schedule', false)
+      handleSaveComplete('schedule')
       console.log(`✅ [스케줄 저장] 완료: ${partyName}파티 - ${raidName}레이드 (캐릭터 ${characters?.length || 0}명)`)
     } catch (error) {
       setSavingState('schedule', false, error.message)
@@ -112,6 +121,7 @@ export function useAutoSave() {
       await userScheduleApi.saveUserSchedule(userScheduleData)
       
       setSavingState('userSchedule', false)
+      handleSaveComplete('userSchedule')
       console.log(`✅ [유저 스케줄 저장] 완료: ${userId} - ${day}요일 (${weekNumber}주차)`)
     } catch (error) {
       setSavingState('userSchedule', false, error.message)
@@ -134,6 +144,7 @@ export function useAutoSave() {
       }
       
       setSavingState('raid', false)
+      handleSaveComplete('raid')
       console.log('✅ [레이드 순서 저장] 완료')
     } catch (error) {
       setSavingState('raid', false, error.message)

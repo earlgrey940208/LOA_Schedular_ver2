@@ -50,6 +50,7 @@ public class CharactorsController {
         }
         
         Charactors savedCharacter = CharactorsRepository.save(character);
+        SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
         return ResponseEntity.ok(savedCharacter);
     }
     
@@ -64,6 +65,7 @@ public class CharactorsController {
             character.setUserId(characterDetails.getUserId());
             character.setSeq(characterDetails.getSeq());
             Charactors updatedCharacter = CharactorsRepository.save(character);
+            SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
             return ResponseEntity.ok(updatedCharacter);
         }
         return ResponseEntity.notFound().build();
@@ -74,6 +76,7 @@ public class CharactorsController {
     public ResponseEntity<Void> deleteCharacter(@PathVariable String name) {
         if (CharactorsRepository.existsById(name)) {
             CharactorsRepository.deleteById(name);
+            SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
@@ -94,6 +97,7 @@ public class CharactorsController {
             }
             
             List<Charactors> savedCharacters = CharactorsRepository.saveAll(characters);
+            SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
             return ResponseEntity.ok(savedCharacters);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();

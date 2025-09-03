@@ -11,6 +11,7 @@ import { useAppData } from '@/composables/useAppData'
 import { useApiIntegration } from '@/composables/useApiIntegration'
 import { useBusinessLogic } from '@/composables/useBusinessLogic'
 import { useAutoSave } from '@/composables/useAutoSave'
+import { useAutoRefresh } from '@/composables/useAutoRefresh'
 
 // 앱 데이터 관리 (컴포저블로 분리)
 const appData = useAppData()
@@ -47,8 +48,17 @@ const {
   advanceWeek
 } = useApiIntegration(appData)
 
-// 자동 저장 기능
-const autoSave = useAutoSave()
+// 자동 갱신 기능
+const autoRefresh = useAutoRefresh(loadData)
+const {
+  lastUpdated,
+  isCheckingUpdates,
+  checkForUpdates,
+  checkAfterSave
+} = autoRefresh
+
+// 자동 저장 기능 (저장 완료 시 자동갱신 트리거)
+const autoSave = useAutoSave(checkAfterSave)
 const {
   savingStates,
   saveErrors,
@@ -179,6 +189,10 @@ onMounted(async () => {
           <span>❌ 저장 실패</span>
           <button @click="clearErrors" class="retry-btn">재시도</button>
         </div>
+        <div v-else-if="isCheckingUpdates" class="auto-save-status refreshing">
+          <div class="spinner"></div>
+          <span>자동 갱신 중...</span>
+        </div>
         <div v-else class="auto-save-status success">
           <span>✅ 자동 저장됨</span>
         </div>
@@ -231,6 +245,12 @@ onMounted(async () => {
   background-color: #fff3cd;
   color: #856404;
   border: 1px solid #ffeaa7;
+}
+
+.auto-save-status.refreshing {
+  background-color: #cce5ff;
+  color: #004085;
+  border: 1px solid #99d6ff;
 }
 
 .auto-save-status.success {

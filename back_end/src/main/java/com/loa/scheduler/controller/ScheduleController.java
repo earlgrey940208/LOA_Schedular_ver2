@@ -52,6 +52,7 @@ public class ScheduleController {
     @PostMapping
     public ResponseEntity<Schedule> createSchedule(@Valid @RequestBody Schedule schedule) {
         Schedule savedSchedule = scheduleRepository.save(schedule);
+        SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
         return ResponseEntity.ok(savedSchedule);
     }
     
@@ -95,6 +96,7 @@ public class ScheduleController {
                 }
             }
             
+            SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
             return ResponseEntity.ok().body("{\"message\": \"스케줄이 성공적으로 저장되었습니다.\"}");
         } catch (Exception e) {
             e.printStackTrace(); // 상세 오류 로그
@@ -110,6 +112,7 @@ public class ScheduleController {
             Boolean isFinish = request.get("isFinish");
             String finishStatus = (isFinish != null && isFinish) ? "Y" : "N";
             scheduleRepository.updateIsFinishByIdAndRaidName(partyName, raidName, finishStatus);
+            SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
             return ResponseEntity.ok().body("{\"message\": \"완료 상태가 업데이트되었습니다.\"}");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("{\"error\": \"완료 상태 업데이트 실패: " + e.getMessage() + "\"}");
@@ -124,6 +127,7 @@ public class ScheduleController {
             List<Schedule> schedules = scheduleRepository.findByIdAndRaidName(partyName, raidName);
             if (!schedules.isEmpty()) {
                 scheduleRepository.deleteAll(schedules);
+                SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
                 return ResponseEntity.ok().body("{\"message\": \"스케줄이 삭제되었습니다.\"}");
             } else {
                 return ResponseEntity.ok().body("{\"message\": \"삭제할 스케줄이 없습니다.\"}");
