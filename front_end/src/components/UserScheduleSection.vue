@@ -4,9 +4,6 @@
       <h2>📅 유저별 주간 일정</h2>
       <div class="header-controls">
         <p class="section-description">클릭: 일정입력 | 우클릭: 가능/불가능 변경 | 매주 수요일 5시 자동 주차 전환</p>
-        <button class="advance-week-btn" @click="$emit('advance-week')" title="수동으로 주차 전환 실행 (2주차→1주차, 기존 1주차 삭제)">
-          주차 전환 (수동)
-        </button>
       </div>
     </div>
     
