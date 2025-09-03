@@ -6,17 +6,17 @@ import CharacterSection from '@/components/CharacterSection.vue'
 import UserScheduleSection from '@/components/UserScheduleSection.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorMessage from '@/components/ui/ErrorMessage.vue'
-import { raidApi, characterApi, scheduleApi } from '@/services/api'
-import { userScheduleApi, userApi } from '@/services/api'
-import { defaultParties, defaultCharacters, defaultRaids, defaultUserSchedules, updateUserColors } from '@/utils/constants'
+import { defaultCharacters, updateUserColors } from '@/utils/constants'
 import { calculateWeekInfo } from '@/utils/weekUtils'
 import { findCharacterUserId, findCharacterIsSupporter } from '@/utils/characterHelpers'
 import { getScheduledCharacters, getCharacterRaids, isCharacterMaxed, isScheduleFinished as utilIsScheduleFinished, toggleScheduleFinish as utilToggleScheduleFinish, markScheduleAsChanged as utilMarkScheduleAsChanged, resetScheduleChanges as utilResetScheduleChanges } from '@/utils/scheduleHelpers'
 import { loadUserSchedules as utilLoadUserSchedules } from '@/utils/userScheduleHelpers'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { useAppData } from '@/composables/useAppData'
+import { useApiIntegration } from '@/composables/useApiIntegration'
 
 // 앱 데이터 관리 (컴포저블로 분리)
+const appData = useAppData()
 const {
   // 상태
   isLoading,
@@ -51,7 +51,17 @@ const {
   setError,
   clearError,
   updateWeekInfo
-} = useAppData()
+} = appData
+
+// API 통신 로직 (컴포저블로 분리)
+const {
+  loadData,
+  loadRaids,
+  saveCharacters,
+  saveAll,
+  loadUserSchedules,
+  advanceWeek
+} = useApiIntegration(appData)
 
 // 기존 코드 (나중에 제거예정)
 // const isLoading = ref(false)
@@ -125,7 +135,8 @@ const onCharacterDoubleClick = (event, party, raid, characterIndex) => {
   }
 }
 
-// 데이터 로드 함수들
+// 기존 loadData 함수는 useApiIntegration으로 이동
+/*
 const loadData = async () => {
   try {
     isLoading.value = true
@@ -234,6 +245,7 @@ const loadData = async () => {
     isLoading.value = false
   }
 }
+*/
 
 // 컴포넌트가 마운트될 때 데이터 가져오기
 onMounted(async () => {
@@ -325,6 +337,8 @@ const deleteCharacter = (userName, characterName) => {
 // 저장 함수 - CharacterSection에 캐릭터 저장을 위임하는 방식
 const characterSectionRef = ref(null)
 
+// 기존 saveAll 함수는 useApiIntegration으로 이동
+/*
 const saveAll = async () => {
   console.log('🟡 saveAll 함수 시작')
   console.log('🟡 hasChanges:', hasChanges.value)
@@ -468,6 +482,7 @@ const saveAll = async () => {
     isLoading.value = false
   }
 }
+*/
 
 // 스케줄 변경사항 추적 래핑 함수들
 const markScheduleAsChanged = () => {
@@ -551,6 +566,8 @@ const toggleUserScheduleEnabled = (userId, dayOfWeek, weekNumber) => {
   hasUserScheduleChanges.value = true
 }
 
+// 기존 advanceWeek과 loadUserSchedules 함수는 useApiIntegration으로 이동
+/*
 // 주차 전환 함수 (백엔드 API 호출)
 const advanceWeek = async () => {
   try {
@@ -581,6 +598,7 @@ const advanceWeek = async () => {
 const loadUserSchedules = async () => {
   await utilLoadUserSchedules(userSchedules)
 }
+*/
 </script>
 
 <template>
@@ -645,7 +663,7 @@ const loadUserSchedules = async () => {
       />
       
       <div class="action-buttons">
-        <button class="save-btn" @click="saveAll" :disabled="!hasChanges">
+        <button class="save-btn" @click="() => saveAll(characterSectionRef)" :disabled="!hasChanges">
           <span v-if="hasChanges">
             저장 ({{ totalChanges }}개 변경)
           </span>
