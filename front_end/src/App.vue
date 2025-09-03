@@ -184,14 +184,14 @@ onMounted(async () => {
         </div>
         
         <!-- 기존 저장 버튼 (백업용으로 유지) -->
-        <button class="save-btn backup" @click="() => saveAll(characterSectionRef)" :disabled="!hasChanges">
+        <!-- <button class="save-btn backup" @click="() => saveAll(characterSectionRef)" :disabled="!hasChanges">
           <span v-if="hasChanges">
             수동 저장 ({{ totalChanges }}개 변경)
           </span>
           <span v-else>
             수동 저장
           </span>
-        </button>
+        </button> -->
       </div>
     </div>
   </div>
