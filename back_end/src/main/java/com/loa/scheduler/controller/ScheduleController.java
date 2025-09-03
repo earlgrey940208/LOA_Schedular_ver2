@@ -121,10 +121,16 @@ public class ScheduleController {
     @Transactional
     public ResponseEntity<String> deleteScheduleByPartyAndRaid(@PathVariable String partyName, @PathVariable String raidName) {
         try {
-            scheduleRepository.deleteByIdAndRaidName(partyName, raidName);
-            return ResponseEntity.ok().body("{\"message\": \"스케줄이 삭제되었습니다.\"}");
+            List<Schedule> schedules = scheduleRepository.findByIdAndRaidName(partyName, raidName);
+            if (!schedules.isEmpty()) {
+                scheduleRepository.deleteAll(schedules);
+                return ResponseEntity.ok().body("{\"message\": \"스케줄이 삭제되었습니다.\"}");
+            } else {
+                return ResponseEntity.ok().body("{\"message\": \"삭제할 스케줄이 없습니다.\"}");
+            }
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("{\"error\": \"스케줄 삭제 실패: " + e.getMessage() + "\"}");
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("{\"error\": \"스케줄 삭제 중 오류가 발생했습니다.\"}");
         }
     }
 }

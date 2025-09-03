@@ -7,7 +7,7 @@ import {
   markScheduleAsChanged as utilMarkScheduleAsChanged 
 } from '@/utils/scheduleHelpers'
 
-export function useBusinessLogic(appData, dragDropFunctions) {
+export function useBusinessLogic(appData, dragDropFunctions, autoSave = null) {
   const {
     // 상태
     characters,
@@ -28,6 +28,9 @@ export function useBusinessLogic(appData, dragDropFunctions) {
     onRightClick: originalOnRightClick
   } = dragDropFunctions
 
+  // 자동 저장 기능 (선택적)
+  const autoSaveEnabled = autoSave !== null
+  
   // ========== 스케줄 관리 로직 ==========
   
   // 스케줄 관련 헬퍼 함수들 (래핑)
@@ -57,14 +60,60 @@ export function useBusinessLogic(appData, dragDropFunctions) {
     utilMarkScheduleAsChanged(hasScheduleChanges)
   }
 
+  // 자동 저장을 위한 스케줄 변경 처리
+  const markScheduleAsChangedWithAutoSave = async (scheduleKey) => {
+    console.log('🎯 [스케줄 변경 자동 저장] 시작:', scheduleKey)
+    markScheduleAsChanged()
+    
+    // 자동 저장 활성화된 경우 즉시 저장
+    if (autoSaveEnabled && autoSave.debouncedSaveSchedule) {
+      const [party, raid] = scheduleKey.split('-')
+      const characters = schedules.value[scheduleKey] || []
+      const isFinished = scheduleFinish.value[scheduleKey] || false
+      
+      console.log('🎯 [스케줄 변경 자동 저장] 데이터:', {
+        party, 
+        raid, 
+        characters: characters.length, 
+        isFinished
+      })
+      
+      autoSave.debouncedSaveSchedule(scheduleKey, characters, isFinished)
+    } else {
+      console.log('🎯 [스케줄 변경 자동 저장] 건너뜀 - 조건 미충족')
+      console.log('🎯 autoSaveEnabled:', autoSaveEnabled)
+      console.log('🎯 debouncedSaveSchedule:', autoSave?.debouncedSaveSchedule)
+    }
+  }
+
   // 래핑된 드래그&드롭 함수들
-  const onScheduleDrop = (event, party, raid, schedules, getCharacterRaids) => {
+  const onScheduleDrop = (event, party, raid) => {
+    console.log('🎯 [스케줄 드롭] 시작:', party, raid)
+    console.log('🎯 [자동 저장 상태] autoSaveEnabled:', autoSaveEnabled)
+    
     const result = originalOnScheduleDrop(event, party, raid, schedules, getCharacterRaidsWrapper, isScheduleFinished, markScheduleAsChanged)
+    
+    // 자동 저장
+    if (result && autoSaveEnabled) {
+      const scheduleKey = `${party}-${raid}`
+      console.log('🎯 [스케줄 드롭] 자동 저장 호출:', scheduleKey)
+      markScheduleAsChangedWithAutoSave(scheduleKey)
+    } else {
+      console.log('🎯 [스케줄 드롭] 자동 저장 건너뜀 - result:', result, 'autoSaveEnabled:', autoSaveEnabled)
+    }
+    
     return result
   }
 
-  const onRightClick = (event, party, raid, characterIndex, schedules) => {
+  const onRightClick = (event, party, raid, characterIndex) => {
     const result = originalOnRightClick(event, party, raid, characterIndex, schedules, toggleScheduleFinish, isScheduleFinished, markScheduleAsChanged)
+    
+    // 자동 저장
+    if (result && autoSaveEnabled) {
+      const scheduleKey = `${party}-${raid}`
+      markScheduleAsChangedWithAutoSave(scheduleKey)
+    }
+    
     return result
   }
 
@@ -84,8 +133,12 @@ export function useBusinessLogic(appData, dragDropFunctions) {
         delete schedules.value[key]
       }
       
-      // 스케줄 변경사항 추적
-      markScheduleAsChanged()
+      // 스케줄 변경사항 추적 및 자동 저장
+      if (autoSaveEnabled) {
+        markScheduleAsChangedWithAutoSave(key)
+      } else {
+        markScheduleAsChanged()
+      }
     }
   }
 
@@ -93,6 +146,9 @@ export function useBusinessLogic(appData, dragDropFunctions) {
   
   const addCharacter = async (userName, characterName) => {
     try {
+      console.log('🎯 [캐릭터 추가] 시작:', userName, characterName)
+      console.log('🎯 [자동 저장 상태] autoSaveEnabled:', autoSaveEnabled)
+      
       // 로컬 상태에만 추가 (서버 저장은 saveAll에서 일괄 처리)
       if (!characters[userName]) {
         characters[userName] = []
@@ -111,23 +167,37 @@ export function useBusinessLogic(appData, dragDropFunctions) {
         seq: maxSeq + 1
       }
       
+      console.log('🎯 [캐릭터 추가] 새 캐릭터 객체:', newCharacter)
+      
       // 로컬 상태에 추가
       characters[userName].push(newCharacter)
       
       // 새 캐릭터 목록에 추가 (서버 저장용)
       newCharacters.value.push(newCharacter)
       
+      // 자동 저장
+      if (autoSaveEnabled && autoSave.saveCharacterChange) {
+        console.log('🎯 [캐릭터 추가] 자동 저장 호출 시작')
+        await autoSave.saveCharacterChange(newCharacter, 'create')
+        console.log('🎯 [캐릭터 추가] 자동 저장 완료')
+      } else {
+        console.log('🎯 [캐릭터 추가] 자동 저장 비활성화 또는 함수 없음')
+        console.log('🎯 autoSave 객체:', autoSave)
+      }
+      
     } catch (error) {
-      console.error('캐릭터 추가 실패:', error)
+      console.error('❌ 캐릭터 추가 실패:', error)
       setError('캐릭터 추가에 실패했습니다')
     }
   }
 
-  const deleteCharacter = (userName, characterName) => {
+  const deleteCharacter = async (userName, characterName) => {
     const userCharacters = characters[userName]
     if (userCharacters) {
       const characterIndex = userCharacters.findIndex(char => char.name === characterName)
       if (characterIndex !== -1) {
+        const character = userCharacters[characterIndex]
+        
         // 새로 추가된 캐릭터인지 확인
         const newCharacterIndex = newCharacters.value.findIndex(char => char.name === characterName)
         
@@ -137,6 +207,11 @@ export function useBusinessLogic(appData, dragDropFunctions) {
         } else {
           // 기존 캐릭터라면 삭제 목록에 추가 (서버에서 삭제 필요)
           deletedCharacters.value.push(characterName) // 이름만 저장
+          
+          // 자동 저장
+          if (autoSaveEnabled && autoSave.saveCharacterChange) {
+            await autoSave.saveCharacterChange(character, 'delete')
+          }
         }
         
         // 로컬 상태에서 제거
@@ -152,6 +227,9 @@ export function useBusinessLogic(appData, dragDropFunctions) {
   // ========== 유저 일정 관리 로직 ==========
   
   const updateUserScheduleText = (userId, dayOfWeek, weekNumber, text) => {
+    console.log('🎯 [유저 스케줄 텍스트 업데이트] 시작:', userId, dayOfWeek, weekNumber, text)
+    console.log('🎯 [자동 저장 상태] autoSaveEnabled:', autoSaveEnabled)
+    
     // 2주차 시스템에 맞게 데이터 구조 수정
     if (!userSchedules.value[userId]) {
       userSchedules.value[userId] = {}
@@ -185,6 +263,20 @@ export function useBusinessLogic(appData, dragDropFunctions) {
       changedUserSchedules.value.push(scheduleData)
     }
     hasUserScheduleChanges.value = true
+    
+    // 자동 저장
+    if (autoSaveEnabled && autoSave.debouncedSaveUserSchedule) {
+      const scheduleData = {
+        text,
+        isEnabled: userSchedules.value[userId][weekKey][dayOfWeek].isEnabled
+      }
+      console.log('🎯 [유저 스케줄 텍스트] 자동 저장 호출:', userId, dayOfWeek, weekNumber)
+      autoSave.debouncedSaveUserSchedule(userId, dayOfWeek, weekNumber, scheduleData)
+    } else {
+      console.log('🎯 [유저 스케줄 텍스트] 자동 저장 건너뜀')
+      console.log('🎯 autoSaveEnabled:', autoSaveEnabled)
+      console.log('🎯 debouncedSaveUserSchedule:', autoSave?.debouncedSaveUserSchedule)
+    }
   }
 
   const toggleUserScheduleEnabled = (userId, dayOfWeek, weekNumber) => {
@@ -223,6 +315,15 @@ export function useBusinessLogic(appData, dragDropFunctions) {
       changedUserSchedules.value.push(scheduleData)
     }
     hasUserScheduleChanges.value = true
+    
+    // 자동 저장
+    if (autoSaveEnabled && autoSave.debouncedSaveUserSchedule) {
+      const scheduleData = {
+        text: userSchedules.value[userId][weekKey][dayOfWeek].text,
+        isEnabled: !currentEnabled
+      }
+      autoSave.debouncedSaveUserSchedule(userId, dayOfWeek, weekNumber, scheduleData)
+    }
   }
 
   return {

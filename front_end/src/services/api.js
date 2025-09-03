@@ -134,6 +134,21 @@ export const raidApi = {
       console.error('Error updating raid order:', error)
       throw error
     }
+  },
+
+  // 개별 레이드 순서 업데이트 (즉시 저장용)
+  updateRaidOrderSingle: async (raidName, newSeq) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/raid/${encodeURIComponent(raidName)}/order`, {
+        ...fetchConfig,
+        method: 'PUT',
+        body: JSON.stringify({ seq: newSeq })
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error updating single raid order:', error)
+      throw error
+    }
   }
 }
 
@@ -203,16 +218,26 @@ export const characterApi = {
         ...fetchConfig,
         method: 'DELETE'
       })
-      return response.ok
+      return await handleResponse(response)
     } catch (error) {
       console.error('Error deleting character:', error)
       throw error
     }
   },
 
-  // 캐릭터 삭제 (이름 기반) - 중복 제거됨
-  deleteCharacterByName: async (characterName) => {
-    return characterApi.deleteCharacter(characterName)
+  // 캐릭터 업데이트 (개별 저장용)
+  updateCharacter: async (characterName, characterData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/charactors/${encodeURIComponent(characterName)}`, {
+        ...fetchConfig,
+        method: 'PUT',
+        body: JSON.stringify(convertToBackend(characterData))
+      })
+      return convertToFrontend(await handleResponse(response))
+    } catch (error) {
+      console.error('Error updating character:', error)
+      throw error
+    }
   },
 
   // 캐릭터 일괄 저장
@@ -320,6 +345,20 @@ export const scheduleApi = {
       return response.ok
     } catch (error) {
       console.error('Error deleting schedule by party and raid:', error)
+      throw error
+    }
+  },
+
+  // 특정 파티-레이드 조합의 모든 스케줄 삭제 (개별 저장용)
+  deleteSchedulesByPartyAndRaid: async (partyName, raidName) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/Schedule/party/${encodeURIComponent(partyName)}/raid/${encodeURIComponent(raidName)}`, {
+        ...fetchConfig,
+        method: 'DELETE'
+      })
+      return response.ok
+    } catch (error) {
+      console.error('Error deleting schedules by party and raid:', error)
       throw error
     }
   }
@@ -491,6 +530,31 @@ export const userScheduleApi = {
       return await handleResponse(response)
     } catch (error) {
       console.error('Error advancing week:', error)
+      throw error
+    }
+  },
+
+  // 개별 유저 스케줄 저장 (즉시 저장용)
+  saveUserSchedule: async (userScheduleData) => {
+    try {
+      const { userId, day, weekNumber, text, isEnabled } = userScheduleData
+      
+      const requestData = {
+        userId,
+        dayOfWeek: day,
+        weekNumber,
+        scheduleText: text || '',
+        enabled: isEnabled ? 'Y' : 'N'
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/user_schedule/single`, {
+        ...fetchConfig,
+        method: 'POST',
+        body: JSON.stringify(requestData)
+      })
+      return await handleResponse(response)
+    } catch (error) {
+      console.error('Error saving single user schedule:', error)
       throw error
     }
   }

@@ -102,9 +102,9 @@ const getScheduledCharacters = (party, raid) => {
 }
 
 // 셀 우클릭 헬퍼 함수 - 셀 배경에서 우클릭 시 완료 토글
-const onCellRightClick = (event, party, raid, schedules, toggleScheduleFinish, isScheduleFinished) => {
+const onCellRightClick = (event, party, raid) => {
   // 셀 배경을 클릭한 경우 완료 상태 토글
-  props.onRightClick(event, party, raid, null, schedules, toggleScheduleFinish, isScheduleFinished)
+  props.onRightClick(event, party, raid, null)
 }
 
 // 레이드 관리 함수들
@@ -349,8 +349,8 @@ const onPartyHover = (partyIndex, isEnter) => {
                 'readonly': isScheduleFinished(party, raid.name || raid)
               }"
               @dragover="!isScheduleFinished(party, raid.name || raid) ? onDragOver($event) : null"
-              @drop="onScheduleDrop($event, party, raid.name || raid, schedules, getCharacterRaids, isScheduleFinished)"
-              @contextmenu="onCellRightClick($event, party, raid.name || raid, schedules, toggleScheduleFinish, isScheduleFinished)"
+              @drop="onScheduleDrop($event, party, raid.name || raid)"
+              @contextmenu="onCellRightClick($event, party, raid.name || raid)"
             >
               <div class="scheduled-characters">
                 <span

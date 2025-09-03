@@ -156,4 +156,34 @@ public class UserScheduleController {
             return ResponseEntity.status(500).body("주차 전환에 실패했습니다: " + e.getMessage());
         }
     }
+    
+    // 개별 유저 스케줄 저장 (즉시 저장용)
+    @PostMapping("/single")
+    public ResponseEntity<UserSchedule> saveSingleUserSchedule(@RequestBody UserSchedule userSchedule) {
+        try {
+            // 기존 스케줄이 있는지 확인
+            Optional<UserSchedule> existing = userScheduleRepository.findByUserIdAndDayOfWeekAndWeekNumber(
+                userSchedule.getUserId(), 
+                userSchedule.getDayOfWeek(), 
+                userSchedule.getWeekNumber()
+            );
+            
+            UserSchedule scheduleToSave;
+            if (existing.isPresent()) {
+                // 기존 스케줄 업데이트
+                scheduleToSave = existing.get();
+                scheduleToSave.setScheduleText(userSchedule.getScheduleText());
+                scheduleToSave.setEnabled(userSchedule.getEnabled());
+            } else {
+                // 새 스케줄 생성
+                scheduleToSave = userSchedule;
+            }
+            
+            UserSchedule savedSchedule = userScheduleRepository.save(scheduleToSave);
+            return ResponseEntity.ok(savedSchedule);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
+    }
 }

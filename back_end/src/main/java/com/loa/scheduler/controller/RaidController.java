@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -81,6 +82,29 @@ public class RaidController {
             List<Raid> updatedRaids = raidRepository.findAll();
             updatedRaids.sort((a, b) -> Long.compare(a.getSeq(), b.getSeq()));
             return ResponseEntity.ok(updatedRaids);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    // 개별 레이드 순서 업데이트 (즉시 저장용)
+    @PutMapping("/{name}/order")
+    public ResponseEntity<Raid> updateRaidOrderSingle(@PathVariable String name, @RequestBody Map<String, Long> updateData) {
+        try {
+            Optional<Raid> optionalRaid = raidRepository.findById(name);
+            if (optionalRaid.isPresent()) {
+                Raid raid = optionalRaid.get();
+                Long newSeq = updateData.get("seq");
+                if (newSeq != null) {
+                    raid.setSeq(newSeq);
+                    Raid savedRaid = raidRepository.save(raid);
+                    return ResponseEntity.ok(savedRaid);
+                } else {
+                    return ResponseEntity.badRequest().build();
+                }
+            } else {
+                return ResponseEntity.notFound().build();
+            }
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }

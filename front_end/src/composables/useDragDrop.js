@@ -140,13 +140,13 @@ export function useDragDrop() {
       // 스케줄이 완료된 상태면 드롭 불가
       if (isScheduleFinished && isScheduleFinished(party, raid)) {
         resetDragState()
-        return
+        return false
       }
       
       // schedules가 제대로 전달되었는지 확인
       if (!schedules || typeof schedules !== 'object') {
         resetDragState()
-        return
+        return false
       }
       
       // schedules가 ref 객체인지 확인하고 .value로 접근
@@ -199,10 +199,14 @@ export function useDragDrop() {
         } else {
           console.warn('⚠️ markScheduleAsChanged 함수가 전달되지 않음')
         }
+        
+        resetDragState()
+        return true // 성공적으로 배치됨
       }
     }
     
     resetDragState()
+    return false // 배치되지 않음
   }
 
   // 드래그 상태 초기화
@@ -224,8 +228,10 @@ export function useDragDrop() {
         if (markScheduleAsChanged) {
           markScheduleAsChanged()
         }
+        return true // 상태가 변경됨
       }
     }
+    return false // 상태가 변경되지 않음
   }
 
   return {

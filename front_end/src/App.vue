@@ -10,6 +10,7 @@ import { useDragDrop } from '@/composables/useDragDrop'
 import { useAppData } from '@/composables/useAppData'
 import { useApiIntegration } from '@/composables/useApiIntegration'
 import { useBusinessLogic } from '@/composables/useBusinessLogic'
+import { useAutoSave } from '@/composables/useAutoSave'
 
 // 앱 데이터 관리 (컴포저블로 분리)
 const appData = useAppData()
@@ -46,6 +47,22 @@ const {
   advanceWeek
 } = useApiIntegration(appData)
 
+// 자동 저장 기능
+const autoSave = useAutoSave()
+const {
+  savingStates,
+  saveErrors,
+  saveCharacterChange,
+  saveScheduleChange,
+  saveUserScheduleChange,
+  saveRaidOrderChange,
+  debouncedSaveUserSchedule,
+  debouncedSaveSchedule,
+  isAnySaving,
+  hasAnyError,
+  clearErrors
+} = autoSave
+
 // 드래그&드롭 기능
 const dragDropFunctions = useDragDrop()
 const {
@@ -80,7 +97,7 @@ const {
   // 유저 일정 관리
   updateUserScheduleText,
   toggleUserScheduleEnabled
-} = useBusinessLogic(appData, dragDropFunctions)
+} = useBusinessLogic(appData, dragDropFunctions, autoSave)
 
 // 저장 함수 - CharacterSection에 캐릭터 저장을 위임하는 방식
 const characterSectionRef = ref(null)
@@ -153,12 +170,26 @@ onMounted(async () => {
       />
       
       <div class="action-buttons">
-        <button class="save-btn" @click="() => saveAll(characterSectionRef)" :disabled="!hasChanges">
+        <!-- 자동 저장 상태 표시 -->
+        <div v-if="isAnySaving()" class="auto-save-status saving">
+          <div class="spinner"></div>
+          <span>자동 저장 중...</span>
+        </div>
+        <div v-else-if="hasAnyError()" class="auto-save-status error">
+          <span>❌ 저장 실패</span>
+          <button @click="clearErrors" class="retry-btn">재시도</button>
+        </div>
+        <div v-else class="auto-save-status success">
+          <span>✅ 자동 저장됨</span>
+        </div>
+        
+        <!-- 기존 저장 버튼 (백업용으로 유지) -->
+        <button class="save-btn backup" @click="() => saveAll(characterSectionRef)" :disabled="!hasChanges">
           <span v-if="hasChanges">
-            저장 ({{ totalChanges }}개 변경)
+            수동 저장 ({{ totalChanges }}개 변경)
           </span>
           <span v-else>
-            저장
+            수동 저장
           </span>
         </button>
       </div>
@@ -179,32 +210,73 @@ onMounted(async () => {
 }
 
 .action-buttons {
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 2rem;
 }
 
-.save-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  padding: 0.75rem 2rem;
-  border-radius: 25px;
-  font-size: 1rem;
-  font-weight: 600;
+.auto-save-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.auto-save-status.saving {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.auto-save-status.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.auto-save-status.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.retry-btn {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
-  position: relative;
 }
 
-.save-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+.retry-btn:hover {
+  background: currentColor;
+  color: white;
 }
 
-.save-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+.save-btn.backup {
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+  font-size: 0.9rem;
+  padding: 0.6rem 1.5rem;
 }
 </style>
