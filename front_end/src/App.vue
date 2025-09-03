@@ -14,52 +14,67 @@ import { findCharacterUserId, findCharacterIsSupporter } from '@/utils/character
 import { getScheduledCharacters, getCharacterRaids, isCharacterMaxed, isScheduleFinished as utilIsScheduleFinished, toggleScheduleFinish as utilToggleScheduleFinish, markScheduleAsChanged as utilMarkScheduleAsChanged, resetScheduleChanges as utilResetScheduleChanges } from '@/utils/scheduleHelpers'
 import { loadUserSchedules as utilLoadUserSchedules } from '@/utils/userScheduleHelpers'
 import { useDragDrop } from '@/composables/useDragDrop'
+import { useAppData } from '@/composables/useAppData'
 
-// API 로딩 및 에러 상태 (로컬에서 관리)
-const isLoading = ref(false)
-const error = ref(null)
+// 앱 데이터 관리 (컴포저블로 분리)
+const {
+  // 상태
+  isLoading,
+  error,
+  raids,
+  parties,
+  characters,
+  schedules,
+  scheduleFinish,
+  userSchedules,
+  users,
+  newCharacters,
+  deletedCharacters,
+  modifiedCharacters,
+  raidOrderChanges,
+  newRaids,
+  deletedRaids,
+  hasScheduleChanges,
+  hasUserScheduleChanges,
+  changedUserSchedules,
+  weekInfo,
+  // computed
+  hasChanges,
+  totalChanges,
+  // 메서드
+  resetCharacterChanges,
+  resetRaidChanges,
+  resetDataScheduleChanges,
+  resetDataUserScheduleChanges,
+  resetAllChanges,
+  setLoading,
+  setError,
+  clearError,
+  updateWeekInfo
+} = useAppData()
 
-// 메인 데이터
-const raids = ref([])
-const parties = ref([...defaultParties])
-const characters = reactive({})
-const schedules = ref({})
-const scheduleFinish = ref({}) // 스케줄 완료 상태 관리 {party-raid: true/false}
-const userSchedules = ref({}) // 유저 일정 데이터
-const users = ref([]) // 유저 목록
-
-// 변경 추적
-const newCharacters = ref([]) // 새로 추가된 캐릭터들
-const deletedCharacters = ref([]) // 삭제할 캐릭터 목록
-const modifiedCharacters = ref([]) // 수정된 캐릭터들 (나중에 필요시)
-const raidOrderChanges = ref([]) // 레이드 순서 변경 목록
-const newRaids = ref([]) // 새로 추가된 레이드들
-const deletedRaids = ref([]) // 삭제할 레이드 목록
-const hasScheduleChanges = ref(false) // 스케줄 변경 여부
-const hasUserScheduleChanges = ref(false) // 유저 일정 변경 여부
-const changedUserSchedules = ref([]) // 변경된 유저 일정들만 추적
-
-const weekInfo = ref(calculateWeekInfo())
-
-// 변경사항이 있는지 확인하는 computed
-const hasChanges = computed(() => {
-  const result = newCharacters.value.length > 0 || 
-         deletedCharacters.value.length > 0 || 
-         raidOrderChanges.value.length > 0 || 
-         newRaids.value.length > 0 || 
-         deletedRaids.value.length > 0 ||
-         hasScheduleChanges.value ||
-         hasUserScheduleChanges.value
-  
-  return result
-})
-
-const totalChanges = computed(() => {
-  let total = newCharacters.value.length + deletedCharacters.value.length + raidOrderChanges.value.length + newRaids.value.length + deletedRaids.value.length
-  if (hasScheduleChanges.value) total += 1
-  if (hasUserScheduleChanges.value) total += 1
-  return total
-})
+// 기존 코드 (나중에 제거예정)
+// const isLoading = ref(false)
+// const error = ref(null)
+// const raids = ref([])
+// const parties = ref([...defaultParties])
+// const characters = reactive({})
+// const schedules = ref({})
+// const scheduleFinish = ref({})
+// const userSchedules = ref({})
+// const users = ref([])
+// const newCharacters = ref([])
+// const deletedCharacters = ref([])
+// const modifiedCharacters = ref([])
+// const raidOrderChanges = ref([])
+// const newRaids = ref([])
+// const deletedRaids = ref([])
+// const hasScheduleChanges = ref(false)
+// const hasUserScheduleChanges = ref(false)
+// const changedUserSchedules = ref([])
+// const weekInfo = ref(calculateWeekInfo())
+// const hasChanges = computed(() => { ... })
+// const totalChanges = computed(() => { ... })
 
 // 드래그&드롭 기능
 const {
@@ -121,7 +136,7 @@ const loadData = async () => {
     deletedCharacters.value = []
     modifiedCharacters.value = []
     raidOrderChanges.value = []
-    resetScheduleChanges()
+    resetDataScheduleChanges()
     hasUserScheduleChanges.value = false
     changedUserSchedules.value = [] // 변경된 유저 일정 초기화
     
@@ -459,9 +474,7 @@ const markScheduleAsChanged = () => {
   utilMarkScheduleAsChanged(hasScheduleChanges)
 }
 
-const resetScheduleChanges = () => {
-  utilResetScheduleChanges(hasScheduleChanges)
-}
+// 기존 resetScheduleChanges 함수는 useAppData의 resetDataScheduleChanges로 대체됨
 
 // 유저 일정 관련 함수들 (2주차 시스템)
 const updateUserScheduleText = (userId, dayOfWeek, weekNumber, text) => {
