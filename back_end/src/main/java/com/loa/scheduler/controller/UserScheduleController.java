@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/user_schedule")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"*", "http://localhost:5174"})
 public class UserScheduleController {
     
     @Autowired

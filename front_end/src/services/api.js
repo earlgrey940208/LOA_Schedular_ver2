@@ -11,6 +11,22 @@ const fetchConfig = {
   }
 }
 
+// 프론트엔드 → 백엔드 변환 (boolean → String)
+const convertToBackend = (character) => {
+  return {
+    ...character,
+    isSupporter: character.isSupporter ? 'Y' : 'N'
+  }
+}
+
+// 백엔드 → 프론트엔드 변환 (String → boolean)
+const convertToFrontend = (character) => {
+  return {
+    ...character,
+    isSupporter: character.isSupporter === 'Y'
+  }
+}
+
 // API 응답 처리 헬퍼 함수
 const handleResponse = async (response) => {
   if (response.ok) {
@@ -140,12 +156,7 @@ export const characterApi = {
           groupedCharacters[userId] = []
         }
         
-        groupedCharacters[userId].push({
-          name: character.name,
-          isSupporter: character.isSupporter === 'Y',
-          userId: character.userId,
-          seq: character.seq
-        })
+        groupedCharacters[userId].push(convertToFrontend(character))
       })
       
       return groupedCharacters
@@ -176,9 +187,9 @@ export const characterApi = {
       const response = await fetch(`${API_BASE_URL}/charactors`, {
         ...fetchConfig,
         method: 'POST',
-        body: JSON.stringify(characterData)
+        body: JSON.stringify(convertToBackend(characterData))
       })
-      return await handleResponse(response)
+      return convertToFrontend(await handleResponse(response))
     } catch (error) {
       console.error('Error creating character:', error)
       throw error
@@ -207,12 +218,14 @@ export const characterApi = {
   // 캐릭터 일괄 저장
   saveAllCharacters: async (characters) => {
     try {
+      const backendCharacters = characters.map(convertToBackend)
       const response = await fetch(`${API_BASE_URL}/charactors/batch`, {
         ...fetchConfig,
         method: 'PUT',
-        body: JSON.stringify(characters)
+        body: JSON.stringify(backendCharacters)
       })
-      return await handleResponse(response)
+      const result = await handleResponse(response)
+      return result.map(convertToFrontend)
     } catch (error) {
       console.error('Error saving all characters:', error)
       throw error
