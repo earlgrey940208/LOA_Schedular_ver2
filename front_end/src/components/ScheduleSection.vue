@@ -19,6 +19,23 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  // 변경 추적 상태들
+  newRaids: {
+    type: Array,
+    required: true
+  },
+  deletedRaids: {
+    type: Array,
+    required: true
+  },
+  raidOrderChanges: {
+    type: Array,
+    required: true
+  },
+  hasScheduleChanges: {
+    type: Object,
+    required: true
+  },
   getScheduledCharacters: {
     type: Function,
     required: true
@@ -32,6 +49,10 @@ const props = defineProps({
     required: true
   },
   toggleScheduleFinish: {
+    type: Function,
+    required: true
+  },
+  markScheduleAsChanged: {
     type: Function,
     required: true
   },
@@ -69,7 +90,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['add-raid', 'delete-raid', 'swap-raid-order'])
+const emit = defineEmits(['update:raids', 'update:newRaids', 'update:deletedRaids', 'update:raidOrderChanges'])
 
 // 레이드 추가 관련 상태
 const newRaidInput = ref('')
@@ -84,6 +105,120 @@ const getScheduledCharacters = (party, raid) => {
 const onCellRightClick = (event, party, raid, schedules, toggleScheduleFinish, isScheduleFinished) => {
   // 셀 배경을 클릭한 경우 완료 상태 토글
   props.onRightClick(event, party, raid, null, schedules, toggleScheduleFinish, isScheduleFinished)
+}
+
+// 레이드 관리 함수들
+const addRaid = (raidName) => {
+  if (raidName.trim() && !props.raids.some(raid => raid.name === raidName)) {
+    // 현재 저장된 레이드들만 고려 (newRaids는 제외)
+    const savedRaids = props.raids.filter(raid => 
+      !props.newRaids.some(newRaid => newRaid.name === raid.name)
+    )
+    
+    const maxSeq = savedRaids.length > 0 
+      ? Math.max(...savedRaids.map(raid => raid.seq || 0))
+      : 0
+    
+    // 이미 추가된 새 레이드들의 개수를 고려
+    const newSeq = maxSeq + props.newRaids.length + 1
+    
+    const newRaid = {
+      name: raidName.trim(),
+      seq: newSeq
+    }
+    
+    // 화면에 즉시 추가
+    const updatedRaids = [...props.raids, newRaid]
+    emit('update:raids', updatedRaids)
+    
+    // 변경 추적에 추가
+    const updatedNewRaids = [...props.newRaids, newRaid]
+    emit('update:newRaids', updatedNewRaids)
+    
+  } else {
+    console.warn('레이드 추가 실패 - 이미 존재하거나 빈 이름:', raidName)
+  }
+}
+
+const deleteRaid = (raidName) => {
+  const raidIndex = props.raids.findIndex(raid => raid.name === raidName)
+  if (raidIndex !== -1) {
+    const deletedRaid = props.raids[raidIndex]
+    
+    // 화면에서 즉시 삭제
+    const updatedRaids = [...props.raids]
+    updatedRaids.splice(raidIndex, 1)
+    emit('update:raids', updatedRaids)
+    
+    // 해당 레이드와 관련된 스케줄도 모두 삭제
+    Object.keys(props.schedules).forEach(key => {
+      const [party, raid] = key.split('-')
+      if (raid === raidName) {
+        delete props.schedules[key]
+      }
+    })
+    
+    // 변경 추적에 추가 (새로 추가된 레이드인지 확인)
+    const newRaidIndex = props.newRaids.findIndex(raid => raid.name === raidName)
+    if (newRaidIndex !== -1) {
+      // 새로 추가된 레이드를 삭제하는 경우 - newRaids에서만 제거
+      const updatedNewRaids = [...props.newRaids]
+      updatedNewRaids.splice(newRaidIndex, 1)
+      emit('update:newRaids', updatedNewRaids)
+    } else {
+      // 기존 레이드를 삭제하는 경우 - deletedRaids에 추가
+      const updatedDeletedRaids = [...props.deletedRaids, deletedRaid]
+      emit('update:deletedRaids', updatedDeletedRaids)
+    }
+    
+    // 스케줄 변경사항 추적
+    props.markScheduleAsChanged()
+    
+  } else {
+    console.warn('삭제할 레이드를 찾을 수 없음:', raidName)
+  }
+}
+
+const swapRaidOrder = (fromIndex, toIndex) => {
+  if (fromIndex === toIndex) return
+  
+  const updatedRaids = [...props.raids]
+  
+  // 로컬 배열에서 순서 변경
+  const raid1 = updatedRaids[fromIndex]
+  const raid2 = updatedRaids[toIndex]
+  
+  // seq 값 교환
+  const tempSeq = raid1.seq
+  raid1.seq = raid2.seq
+  raid2.seq = tempSeq
+  
+  // 배열 순서 변경
+  updatedRaids.splice(fromIndex, 1, raid2)
+  updatedRaids.splice(toIndex, 1, raid1)
+  
+  emit('update:raids', updatedRaids)
+  
+  // 변경 사항 추적에 추가
+  const changeIndex = props.raidOrderChanges.findIndex(change => 
+    change.name === raid1.name || change.name === raid2.name
+  )
+  
+  const updatedRaidOrderChanges = [...props.raidOrderChanges]
+  
+  if (changeIndex !== -1) {
+    // 기존 변경사항 업데이트
+    updatedRaidOrderChanges[changeIndex] = { name: raid1.name, seq: raid1.seq }
+    updatedRaidOrderChanges.push({ name: raid2.name, seq: raid2.seq })
+  } else {
+    // 새로운 변경사항 추가
+    updatedRaidOrderChanges.push(
+      { name: raid1.name, seq: raid1.seq },
+      { name: raid2.name, seq: raid2.seq }
+    )
+  }
+  
+  emit('update:raidOrderChanges', updatedRaidOrderChanges)
 }
 
 // 레이드 추가 모드 시작
@@ -102,7 +237,7 @@ const startAddingRaid = () => {
 // 새 레이드 추가
 const addNewRaid = () => {
   if (newRaidInput.value.trim()) {
-    emit('add-raid', newRaidInput.value.trim())
+    addRaid(newRaidInput.value.trim())
   }
   
   isAddingRaid.value = false
@@ -113,11 +248,6 @@ const addNewRaid = () => {
 const cancelAddingRaid = () => {
   isAddingRaid.value = false
   newRaidInput.value = ''
-}
-
-// 레이드 삭제
-const deleteRaid = (raidName) => {
-  emit('delete-raid', raidName)
 }
 
 // Hover 관련 함수들
@@ -164,7 +294,7 @@ const onPartyHover = (partyIndex, isEnter) => {
               draggable="true"
               @dragstart="onRaidDragStart($event, raid, index)"
               @dragover="onDragOver"
-              @drop="onRaidDrop($event, index, raids)"
+              @drop="(event) => props.onRaidDrop(event, index, raids, swapRaidOrder)"
               @mouseenter="onHeaderHover(index, true)"
               @mouseleave="onHeaderHover(index, false)"
             >

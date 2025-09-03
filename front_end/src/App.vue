@@ -247,68 +247,6 @@ const toggleScheduleFinish = (party, raid) => {
   utilToggleScheduleFinish(party, raid, scheduleFinish.value)
 }
 
-// 레이드 관련 함수들
-const addRaid = (raidName) => {
-  if (raidName.trim() && !raids.value.some(raid => raid.name === raidName)) {
-    // 현재 저장된 레이드들만 고려 (newRaids는 제외)
-    const savedRaids = raids.value.filter(raid => 
-      !newRaids.value.some(newRaid => newRaid.name === raid.name)
-    )
-    
-    const maxSeq = savedRaids.length > 0 
-      ? Math.max(...savedRaids.map(raid => raid.seq || 0))
-      : 0
-    
-    // 이미 추가된 새 레이드들의 개수를 고려
-    const newSeq = maxSeq + newRaids.value.length + 1
-    
-    const newRaid = {
-      name: raidName.trim(),
-      seq: newSeq
-    }
-    
-    // 화면에 즉시 추가
-    raids.value.push(newRaid)
-    
-    // 변경 추적에 추가
-    newRaids.value.push(newRaid)
-    
-  } else {
-    console.warn('레이드 추가 실패 - 이미 존재하거나 빈 이름:', raidName)
-  }
-}
-
-const deleteRaid = (raidName) => {
-  const raidIndex = raids.value.findIndex(raid => raid.name === raidName)
-  if (raidIndex !== -1) {
-    const deletedRaid = raids.value[raidIndex]
-    
-    // 화면에서 즉시 삭제
-    raids.value.splice(raidIndex, 1)
-    
-    // 해당 레이드와 관련된 스케줄도 모두 삭제
-    Object.keys(schedules.value).forEach(key => {
-      const [party, raid] = key.split('-')
-      if (raid === raidName) {
-        delete schedules.value[key]
-      }
-    })
-    
-    // 변경 추적에 추가 (새로 추가된 레이드인지 확인)
-    const newRaidIndex = newRaids.value.findIndex(raid => raid.name === raidName)
-    if (newRaidIndex !== -1) {
-      // 새로 추가된 레이드를 삭제하는 경우 - newRaids에서만 제거
-      newRaids.value.splice(newRaidIndex, 1)
-    } else {
-      // 기존 레이를 삭제하는 경우 - deletedRaids에 추가
-      deletedRaids.value.push(deletedRaid)
-    }
-    
-  } else {
-    console.warn('삭제할 레이드를 찾을 수 없음:', raidName)
-  }
-}
-
 // 캐릭터 관련 함수들
 const addCharacter = async (userName, characterName) => {
   try {
@@ -366,41 +304,6 @@ const deleteCharacter = (userName, characterName) => {
     }
   } else {
     console.warn('❌ 사용자를 찾을 수 없음:', userName)
-  }
-}
-
-// 레이드 순서 변경 함수
-const swapRaidOrder = (fromIndex, toIndex) => {
-  if (fromIndex === toIndex) return
-  
-  // 로컬 배열에서 순서 변경
-  const raid1 = raids.value[fromIndex]
-  const raid2 = raids.value[toIndex]
-  
-  // seq 값 교환
-  const tempSeq = raid1.seq
-  raid1.seq = raid2.seq
-  raid2.seq = tempSeq
-  
-  // 배열 순서 변경
-  raids.value.splice(fromIndex, 1, raid2)
-  raids.value.splice(toIndex, 1, raid1)
-  
-  // 변경 사항 추적에 추가
-  const changeIndex = raidOrderChanges.value.findIndex(change => 
-    change.name === raid1.name || change.name === raid2.name
-  )
-  
-  if (changeIndex !== -1) {
-    // 기존 변경사항 업데이트
-    raidOrderChanges.value[changeIndex] = { name: raid1.name, seq: raid1.seq }
-    raidOrderChanges.value.push({ name: raid2.name, seq: raid2.seq })
-  } else {
-    // 새로운 변경사항 추가
-    raidOrderChanges.value.push(
-      { name: raid1.name, seq: raid1.seq },
-      { name: raid2.name, seq: raid2.seq }
-    )
   }
 }
 
@@ -680,10 +583,15 @@ const loadUserSchedules = async () => {
         :parties="parties"
         :schedules="schedules"
         :scheduleFinish="scheduleFinish"
+        :newRaids="newRaids"
+        :deletedRaids="deletedRaids"
+        :raidOrderChanges="raidOrderChanges"
+        :hasScheduleChanges="hasScheduleChanges"
         :getScheduledCharacters="getScheduledCharactersWrapper"
         :getCharacterRaids="getCharacterRaidsWrapper"
         :isScheduleFinished="isScheduleFinished"
         :toggleScheduleFinish="toggleScheduleFinish"
+        :markScheduleAsChanged="markScheduleAsChanged"
         :onDragOver="onDragOver"
         :onScheduleDrop="onScheduleDrop"
         :onRightClick="onRightClick"
@@ -692,9 +600,10 @@ const loadUserSchedules = async () => {
         :onRaidDrop="onRaidDrop"
         :onPartyDragStart="onPartyDragStart"
         :onPartyDrop="onPartyDrop"
-        @add-raid="addRaid"
-        @delete-raid="deleteRaid"
-        @swap-raid-order="swapRaidOrder"
+        @update:raids="(value) => raids = value"
+        @update:newRaids="(value) => newRaids = value"
+        @update:deletedRaids="(value) => deletedRaids = value"
+        @update:raidOrderChanges="(value) => raidOrderChanges = value"
       />
       
       <CharacterSection 
