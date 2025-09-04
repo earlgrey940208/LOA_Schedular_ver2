@@ -342,13 +342,13 @@ export function useBusinessLogic(appData, dragDropFunctions, autoSave = null) {
     }
     hasUserScheduleChanges.value = true
     
-    // 자동 저장
-    if (autoSaveEnabled && autoSave.debouncedSaveUserSchedule) {
+    // 자동 저장 (즉시 저장으로 변경)
+    if (autoSaveEnabled && autoSave.immediateSaveUserSchedule) {
       const scheduleData = {
         text: userSchedules.value[userId][weekKey][dayOfWeek].text,
         isEnabled: !currentEnabled
       }
-      autoSave.debouncedSaveUserSchedule(userId, dayOfWeek, weekNumber, scheduleData)
+      autoSave.immediateSaveUserSchedule(userId, dayOfWeek, weekNumber, scheduleData)
     }
   }
 
