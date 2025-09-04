@@ -368,7 +368,19 @@ export const scheduleApi = {
 export const api = {
   raid: raidApi,
   character: characterApi,
-  schedule: scheduleApi
+  schedule: scheduleApi,
+  
+  // 마지막 업데이트 시간 조회 (폴백용)
+  getLastUpdated: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/last-updated`, fetchConfig)
+      const timestampStr = await response.text()
+      return new Date(timestampStr)
+    } catch (error) {
+      console.error('Error fetching last updated:', error)
+      return new Date() // 현재 시간을 기본값으로
+    }
+  }
 }
 
 // 유저 API

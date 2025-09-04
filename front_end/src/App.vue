@@ -53,6 +53,7 @@ const autoRefresh = useAutoRefresh(loadData)
 const {
   lastUpdated,
   isCheckingUpdates,
+  isSSEConnected,
   checkForUpdates,
   checkAfterSave
 } = autoRefresh
@@ -180,6 +181,11 @@ onMounted(async () => {
       />
       
       <div class="action-buttons">
+        <!-- 실시간 연결 상태 표시 -->
+        <div v-if="isSSEConnected" class="auto-save-status connected">
+          <span>🔗 실시간 연결됨</span>
+        </div>
+        
         <!-- 자동 저장 상태 표시 -->
         <div v-if="isAnySaving()" class="auto-save-status saving">
           <div class="spinner"></div>
@@ -239,6 +245,12 @@ onMounted(async () => {
   border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+.auto-save-status.connected {
+  background-color: #e7f5ff;
+  color: #1971c2;
+  border: 1px solid #74c0fc;
 }
 
 .auto-save-status.saving {

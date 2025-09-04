@@ -21,6 +21,9 @@ public class UserScheduleController {
     @Autowired
     private WeeklyScheduleService weeklyScheduleService;
     
+    @Autowired
+    private EventController eventController;
+    
     // 모든 유저 일정 조회
     @GetMapping
     public ResponseEntity<List<UserSchedule>> getAllUserSchedules() {
@@ -69,9 +72,11 @@ public class UserScheduleController {
                 existingSchedule.setScheduleText(userSchedule.getScheduleText());
                 existingSchedule.setEnabled(userSchedule.getEnabled());
                 savedSchedule = userScheduleRepository.save(existingSchedule);
+                eventController.broadcastUpdate("user-schedule-updated", "유저 일정이 수정되었습니다: " + userSchedule.getUserId() + " - " + userSchedule.getDayOfWeek());
             } else {
                 // 새로 생성
                 savedSchedule = userScheduleRepository.save(userSchedule);
+                eventController.broadcastUpdate("user-schedule-created", "유저 일정이 추가되었습니다: " + userSchedule.getUserId() + " - " + userSchedule.getDayOfWeek());
             }
             
             return ResponseEntity.ok(savedSchedule);
@@ -111,6 +116,7 @@ public class UserScheduleController {
                 }
             }
             
+            eventController.broadcastUpdate("user-schedule-batch-saved", "유저 일정이 일괄 저장되었습니다.");
             return ResponseEntity.ok("일정이 성공적으로 저장되었습니다.");
         } catch (Exception e) {
             e.printStackTrace();
@@ -129,6 +135,7 @@ public class UserScheduleController {
                 .findByUserIdAndDayOfWeekAndWeekNumber(userId, dayOfWeek, weekNumber);
             if (existing.isPresent()) {
                 userScheduleRepository.delete(existing.get());
+                eventController.broadcastUpdate("user-schedule-deleted", "유저 일정이 삭제되었습니다: " + userId + " - " + dayOfWeek);
                 return ResponseEntity.ok("일정이 삭제되었습니다.");
             } else {
                 return ResponseEntity.status(404).body("해당 일정을 찾을 수 없습니다.");
@@ -150,6 +157,7 @@ public class UserScheduleController {
     public ResponseEntity<String> advanceWeek() {
         try {
             weeklyScheduleService.manualAdvanceWeek();
+            eventController.broadcastUpdate("week-advanced", "주차 전환이 완료되었습니다.");
             return ResponseEntity.ok("주차 전환이 완료되었습니다.");
         } catch (Exception e) {
             e.printStackTrace();
@@ -180,6 +188,13 @@ public class UserScheduleController {
             }
             
             UserSchedule savedSchedule = userScheduleRepository.save(scheduleToSave);
+            
+            if (existing.isPresent()) {
+                eventController.broadcastUpdate("user-schedule-updated", "유저 일정이 수정되었습니다: " + userSchedule.getUserId() + " - " + userSchedule.getDayOfWeek());
+            } else {
+                eventController.broadcastUpdate("user-schedule-created", "유저 일정이 추가되었습니다: " + userSchedule.getUserId() + " - " + userSchedule.getDayOfWeek());
+            }
+            
             return ResponseEntity.ok(savedSchedule);
         } catch (Exception e) {
             e.printStackTrace();

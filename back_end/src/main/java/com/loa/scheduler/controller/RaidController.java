@@ -18,6 +18,9 @@ public class RaidController {
     @Autowired
     private RaidRepository raidRepository;
     
+    @Autowired
+    private EventController eventController;
+    
     // 모든 레이드 조회 (seq 순으로 정렬)
     @GetMapping
     public List<Raid> getAllRaids() {
@@ -38,6 +41,10 @@ public class RaidController {
         }
         
         Raid savedRaid = raidRepository.save(raid);
+        
+        // SSE 이벤트 브로드캐스트
+        eventController.broadcastUpdate("raid-created", "레이드 '" + raid.getName() + "'이 추가되었습니다.");
+        
         return ResponseEntity.ok(savedRaid);
     }
     
@@ -50,6 +57,10 @@ public class RaidController {
             // name은 primary key이므로 변경 불가, seq만 수정
             raid.setSeq(raidDetails.getSeq());
             Raid updatedRaid = raidRepository.save(raid);
+            
+            // SSE 이벤트 브로드캐스트
+            eventController.broadcastUpdate("raid-updated", "레이드 '" + name + "'이 수정되었습니다.");
+            
             return ResponseEntity.ok(updatedRaid);
         }
         return ResponseEntity.notFound().build();
@@ -60,6 +71,10 @@ public class RaidController {
     public ResponseEntity<Void> deleteRaid(@PathVariable String name) {
         if (raidRepository.existsById(name)) {
             raidRepository.deleteById(name);
+            
+            // SSE 이벤트 브로드캐스트
+            eventController.broadcastUpdate("raid-deleted", "레이드 '" + name + "'이 삭제되었습니다.");
+            
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
@@ -81,6 +96,10 @@ public class RaidController {
             // 업데이트된 전체 레이드 목록을 seq 순으로 반환
             List<Raid> updatedRaids = raidRepository.findAll();
             updatedRaids.sort((a, b) -> Long.compare(a.getSeq(), b.getSeq()));
+            
+            // SSE 이벤트 브로드캐스트
+            eventController.broadcastUpdate("raid-order-updated", "레이드 순서가 변경되었습니다.");
+            
             return ResponseEntity.ok(updatedRaids);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
