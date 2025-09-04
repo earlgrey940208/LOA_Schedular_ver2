@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick, computed } from 'vue'
+import { ref, nextTick, computed, onMounted } from 'vue'
 import { userColors } from '@/utils/constants'
 import { characterApi } from '@/services/api'
 
@@ -48,6 +48,24 @@ const handleCharacterDragStart = (character) => {
 // 캐릭터 추가 관련 상태
 const newCharacterInput = ref('')
 const editingUser = ref(null)
+
+// 접기 기능 상태 관리 (기본값: 접힌 상태)
+const isCollapsed = ref(true)
+
+// 컴포넌트 마운트 시 localStorage에서 접기 상태 복원
+onMounted(() => {
+  const savedState = localStorage.getItem('characterSectionCollapsed')
+  if (savedState !== null) {
+    isCollapsed.value = savedState === 'true'
+  }
+  // savedState가 null이면 기본값 true(접힌 상태) 유지
+})
+
+// 접기/펼치기 토글 함수
+const toggleCollapse = () => {
+  isCollapsed.value = !isCollapsed.value
+  localStorage.setItem('characterSectionCollapsed', isCollapsed.value.toString())
+}
 
 // 변경사항이 있는지 확인하는 computed
 const hasChanges = computed(() => {
@@ -149,7 +167,16 @@ defineExpose({
 <template>
   <section class="character-section">
     <div class="section-header">
-      <h2>🤸🏻‍♀️ 캐릭터 선택</h2>
+      <div class="section-title">
+        <h2>🤸🏻‍♀️ 캐릭터 선택</h2>
+        <button 
+          class="collapse-btn" 
+          @click="toggleCollapse"
+          :class="{ collapsed: isCollapsed }"
+        >
+          <span class="collapse-icon">▼</span>
+        </button>
+      </div>
       <div class="change-info" v-if="hasChanges">
         <span v-if="props.newCharacters.length > 0" class="new-count">
           새 캐릭터: {{ props.newCharacters.length }}개
@@ -159,64 +186,67 @@ defineExpose({
         </span>
       </div>
     </div>
-    <div class="character-table">
-      <table>
-        <tbody>
-          <tr v-for="(characterList, userName) in characters" :key="userName">
-            <td class="user-cell">{{ userName }}</td>
-            <td class="characters-cell">
-              <div class="character-tags">
-                <span 
-                  v-for="(character, index) in characterList" 
-                  :key="`${character.name}-${index}`"
-                  class="character-tag"
-                  :style="{ backgroundColor: userColors[character.userId] }"
-                  :class="{ 
-                    supporter: character.isSupporter,
-                    disabled: isCharacterMaxed(character.name),
-                    'drag-target': true
-                  }"
-                  :draggable="!isCharacterMaxed(character.name)"
-                  @dragstart="!isCharacterMaxed(character.name) ? handleCharacterDragStart(character) : onCharacterOrderDragStart($event, character, userName, index)"
-                  @dragover="onDragOver"
-                  @drop="onCharacterOrderDrop($event, userName, index, characters)"
-                  @dragenter="onDragOver"
-                >
-                  {{ character.name }}
-                  <button 
-                    class="delete-btn"
-                    @click="deleteCharacter(userName, character.name)"
-                    @click.stop
+    
+    <div class="character-content" :class="{ collapsed: isCollapsed }">
+      <div class="character-table">
+        <table>
+          <tbody>
+            <tr v-for="(characterList, userName) in characters" :key="userName">
+              <td class="user-cell">{{ userName }}</td>
+              <td class="characters-cell">
+                <div class="character-tags">
+                  <span 
+                    v-for="(character, index) in characterList" 
+                    :key="`${character.name}-${index}`"
+                    class="character-tag"
+                    :style="{ backgroundColor: userColors[character.userId] }"
+                    :class="{ 
+                      supporter: character.isSupporter,
+                      disabled: isCharacterMaxed(character.name),
+                      'drag-target': true
+                    }"
+                    :draggable="!isCharacterMaxed(character.name)"
+                    @dragstart="!isCharacterMaxed(character.name) ? handleCharacterDragStart(character) : onCharacterOrderDragStart($event, character, userName, index)"
+                    @dragover="onDragOver"
+                    @drop="onCharacterOrderDrop($event, userName, index, characters)"
+                    @dragenter="onDragOver"
                   >
-                    ×
+                    {{ character.name }}
+                    <button 
+                      class="delete-btn"
+                      @click="deleteCharacter(userName, character.name)"
+                      @click.stop
+                    >
+                      ×
+                    </button>
+                  </span>
+                  
+                  <!-- 새 캐릭터 입력 -->
+                  <input
+                    v-if="editingUser === userName"
+                    v-model="newCharacterInput"
+                    ref="newCharacterInputRef"
+                    class="new-character-input"
+                    :style="{ borderColor: userColors[characterList[0]?.userId] }"
+                    placeholder="캐릭터명 입력"
+                    @keyup.enter="addNewCharacter(userName)"
+                    @keyup.esc="cancelAddingCharacter"
+                    @blur="cancelAddingCharacter"
+                  />
+                  
+                  <button 
+                    class="add-btn"
+                    @click="startAddingCharacter(userName)"
+                    v-if="editingUser !== userName"
+                  >
+                    +
                   </button>
-                </span>
-                
-                <!-- 새 캐릭터 입력 -->
-                <input
-                  v-if="editingUser === userName"
-                  v-model="newCharacterInput"
-                  ref="newCharacterInputRef"
-                  class="new-character-input"
-                  :style="{ borderColor: userColors[characterList[0]?.userId] }"
-                  placeholder="캐릭터명 입력"
-                  @keyup.enter="addNewCharacter(userName)"
-                  @keyup.esc="cancelAddingCharacter"
-                  @blur="cancelAddingCharacter"
-                />
-                
-                <button 
-                  class="add-btn"
-                  @click="startAddingCharacter(userName)"
-                  v-if="editingUser !== userName"
-                >
-                  +
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 </template>
@@ -230,17 +260,68 @@ defineExpose({
   margin-bottom: 2rem;
 }
 
-.character-section h2 {
-  margin: 0 0 1.5rem 0;
-  font-size: 1.5rem;
-  color: #2c3e50;
-}
-
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.section-title h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #2c3e50;
+}
+
+.collapse-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  width: 36px;
+  height: 36px;
+}
+
+.collapse-btn:hover {
+  background-color: #e9ecef;
+  transform: scale(1.1);
+}
+
+.collapse-icon {
+  font-size: 0.9rem;
+  color: #6c757d;
+  transition: transform 0.3s ease;
+  display: inline-block;
+}
+
+.collapse-btn.collapsed .collapse-icon {
+  transform: rotate(-90deg);
+}
+
+.character-content {
+  max-height: 1000px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  opacity: 1;
+}
+
+.character-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
 }
 
 .change-info {
