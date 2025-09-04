@@ -156,6 +156,10 @@ export function useAutoSave(onSaveComplete = null) {
   // Debounced 저장 함수들 (연속 입력 방지)
   const debouncedSaveUserSchedule = debounce(saveUserScheduleChange, 1000) // 1초 대기
   const debouncedSaveSchedule = debounce(saveScheduleChange, 500) // 0.5초 대기
+  
+  // 즉시 저장 함수들 (우클릭, 더블클릭 등 중요한 액션용)
+  const immediateSaveSchedule = saveScheduleChange // debounce 없이 즉시 저장
+  const immediateSaveUserSchedule = saveUserScheduleChange // debounce 없이 즉시 저장
 
   // 전체 저장 상태 확인
   const isAnySaving = () => {
@@ -188,6 +192,10 @@ export function useAutoSave(onSaveComplete = null) {
     // Debounced 함수들
     debouncedSaveUserSchedule,
     debouncedSaveSchedule,
+    
+    // 즉시 저장 함수들 (우클릭, 더블클릭 등 중요한 액션용)
+    immediateSaveSchedule,
+    immediateSaveUserSchedule,
     
     // 유틸리티
     isAnySaving,

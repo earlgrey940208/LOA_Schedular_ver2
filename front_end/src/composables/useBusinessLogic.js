@@ -85,6 +85,32 @@ export function useBusinessLogic(appData, dragDropFunctions, autoSave = null) {
       console.log('🎯 debouncedSaveSchedule:', autoSave?.debouncedSaveSchedule)
     }
   }
+  
+  // 즉시 저장을 위한 스케줄 변경 처리 (우클릭, 더블클릭 등 중요한 액션용)
+  const markScheduleAsChangedWithImmediateSave = async (scheduleKey) => {
+    console.log('⚡ [스케줄 즉시 저장] 시작:', scheduleKey)
+    markScheduleAsChanged()
+    
+    // 자동 저장 활성화된 경우 즉시 저장 (debounce 없이)
+    if (autoSaveEnabled && autoSave.immediateSaveSchedule) {
+      const [party, raid] = scheduleKey.split('-')
+      const characters = schedules.value[scheduleKey] || []
+      const isFinished = scheduleFinish.value[scheduleKey] || false
+      
+      console.log('⚡ [스케줄 즉시 저장] 데이터:', {
+        party, 
+        raid, 
+        characters: characters.length, 
+        isFinished
+      })
+      
+      autoSave.immediateSaveSchedule(scheduleKey, characters, isFinished)
+    } else {
+      console.log('⚡ [스케줄 즉시 저장] 건너뜀 - 조건 미충족')
+      console.log('⚡ autoSaveEnabled:', autoSaveEnabled)
+      console.log('⚡ immediateSaveSchedule:', autoSave?.immediateSaveSchedule)
+    }
+  }
 
   // 래핑된 드래그&드롭 함수들
   const onScheduleDrop = (event, party, raid) => {
@@ -108,10 +134,10 @@ export function useBusinessLogic(appData, dragDropFunctions, autoSave = null) {
   const onRightClick = (event, party, raid, characterIndex) => {
     const result = originalOnRightClick(event, party, raid, characterIndex, schedules, toggleScheduleFinish, isScheduleFinished, markScheduleAsChanged)
     
-    // 자동 저장
+    // 자동 저장 (즉시 저장으로 변경)
     if (result && autoSaveEnabled) {
       const scheduleKey = `${party}-${raid}`
-      markScheduleAsChangedWithAutoSave(scheduleKey)
+      markScheduleAsChangedWithImmediateSave(scheduleKey)
     }
     
     return result
@@ -133,9 +159,9 @@ export function useBusinessLogic(appData, dragDropFunctions, autoSave = null) {
         delete schedules.value[key]
       }
       
-      // 스케줄 변경사항 추적 및 자동 저장
+      // 스케줄 변경사항 추적 및 자동 저장 (즉시 저장으로 변경)
       if (autoSaveEnabled) {
-        markScheduleAsChangedWithAutoSave(key)
+        markScheduleAsChangedWithImmediateSave(key)
       } else {
         markScheduleAsChanged()
       }
