@@ -4,7 +4,7 @@ import AppHeader from '@/components/AppHeader.vue'
 import ScheduleSection from '@/components/ScheduleSection.vue'
 import CharacterSection from '@/components/CharacterSection.vue'
 import UserScheduleSection from '@/components/UserScheduleSection.vue'
-import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
+// import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorMessage from '@/components/ui/ErrorMessage.vue'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { useAppData } from '@/composables/useAppData'
@@ -121,7 +121,7 @@ onMounted(async () => {
 
 <template>
   <div class="app">
-    <LoadingSpinner v-if="isLoading" />
+    <!-- <LoadingSpinner v-if="isLoading" /> -->
     <ErrorMessage v-if="error" :message="error" />
     
     <AppHeader />
