@@ -62,7 +62,14 @@ public class UserController {
                 return ResponseEntity.status(409).build(); // Conflict
             }
             User savedUser = userRepository.save(user);
-            eventController.broadcastUpdate("user-created", "유저 '" + user.getName() + "'이 추가되었습니다.");
+            
+            // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+            try {
+                eventController.broadcastUpdate("user-created", "유저 '" + user.getName() + "'이 추가되었습니다.");
+            } catch (Exception e) {
+                System.err.println("SSE 브로드캐스트 실패 (유저 생성은 성공): " + e.getMessage());
+            }
+            
             return ResponseEntity.ok(savedUser);
         } catch (Exception e) {
             e.printStackTrace();
@@ -80,7 +87,13 @@ public class UserController {
                 user.setColor(userDetails.getColor());
                 // 이름 변경은 복잡성을 피하기 위해 제한
                 User updatedUser = userRepository.save(user);
-                eventController.broadcastUpdate("user-updated", "유저 '" + name + "'이 수정되었습니다.");
+                
+                // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+                try {
+                    eventController.broadcastUpdate("user-updated", "유저 '" + name + "'이 수정되었습니다.");
+                } catch (Exception e) {
+                    System.err.println("SSE 브로드캐스트 실패 (유저 수정은 성공): " + e.getMessage());
+                }
                 return ResponseEntity.ok(updatedUser);
             } else {
                 return ResponseEntity.status(404).build();
@@ -98,7 +111,14 @@ public class UserController {
             Optional<User> user = userRepository.findByName(name);
             if (user.isPresent()) {
                 userRepository.delete(user.get());
-                eventController.broadcastUpdate("user-deleted", "유저 '" + name + "'이 삭제되었습니다.");
+                
+                // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+                try {
+                    eventController.broadcastUpdate("user-deleted", "유저 '" + name + "'이 삭제되었습니다.");
+                } catch (Exception e) {
+                    System.err.println("SSE 브로드캐스트 실패 (유저 삭제는 성공): " + e.getMessage());
+                }
+                
                 return ResponseEntity.ok("유저가 삭제되었습니다.");
             } else {
                 return ResponseEntity.status(404).body("해당 유저를 찾을 수 없습니다.");

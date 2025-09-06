@@ -17,6 +17,9 @@ public class EventController {
     // 연결된 모든 클라이언트를 저장
     private final CopyOnWriteArraySet<SseEmitter> emitters = new CopyOnWriteArraySet<>();
     
+    // 최대 연결 수 제한
+    private static final int MAX_CONNECTIONS = 50;
+    
     // 마지막 업데이트 시간
     private volatile LocalDateTime lastUpdated = LocalDateTime.now();
     
@@ -25,7 +28,27 @@ public class EventController {
      */
     @GetMapping(value = "/updates", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribe() {
-        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
+        // 연결 수 제한 체크
+        if (emitters.size() >= MAX_CONNECTIONS) {
+            // 오래된 연결들을 정리
+            cleanupOldConnections();
+            
+            // 여전히 제한을 초과하면 새 연결 거부
+            if (emitters.size() >= MAX_CONNECTIONS) {
+                SseEmitter emitter = new SseEmitter(1000L); // 짧은 타임아웃
+                try {
+                    emitter.send(SseEmitter.event()
+                        .name("error")
+                        .data("연결 수 제한 초과"));
+                    emitter.complete();
+                } catch (IOException e) {
+                    // 무시
+                }
+                return emitter;
+            }
+        }
+        
+        SseEmitter emitter = new SseEmitter(300000L); // 5분 타임아웃
         
         try {
             // 연결 성공 메시지 전송
@@ -44,6 +67,7 @@ public class EventController {
             System.out.println("SSE 클라이언트 연결됨. 총 연결 수: " + emitters.size());
             
         } catch (IOException e) {
+            System.err.println("SSE 연결 초기화 실패: " + e.getMessage());
             emitter.completeWithError(e);
             return emitter;
         }
@@ -78,6 +102,12 @@ public class EventController {
         
         for (SseEmitter emitter : emitters) {
             try {
+                // 연결 상태 먼저 체크
+                if (isEmitterClosed(emitter)) {
+                    deadEmitters.add(emitter);
+                    continue;
+                }
+                
                 emitter.send(SseEmitter.event()
                     .name(eventType)
                     .data(data)
@@ -89,8 +119,10 @@ public class EventController {
                     .data(lastUpdated.toString())
                     .id(String.valueOf(System.currentTimeMillis())));
                     
-            } catch (IOException e) {
+            } catch (Exception e) {
+                // 모든 예외를 잡아서 deadEmitters에 추가
                 deadEmitters.add(emitter);
+                System.err.println("SSE 전송 실패: " + e.getMessage());
             }
         }
         
@@ -102,6 +134,42 @@ public class EventController {
         }
         
         System.out.println("SSE 브로드캐스트: " + eventType + " - 활성 연결 수: " + emitters.size());
+    }
+    
+    /**
+     * 오래된 연결들을 정리
+     */
+    private void cleanupOldConnections() {
+        CopyOnWriteArraySet<SseEmitter> deadEmitters = new CopyOnWriteArraySet<>();
+        
+        for (SseEmitter emitter : emitters) {
+            try {
+                // 간단한 ping 메시지로 연결 상태 확인
+                emitter.send(SseEmitter.event()
+                    .name("ping")
+                    .data("connection-check"));
+            } catch (Exception e) {
+                deadEmitters.add(emitter);
+            }
+        }
+        
+        emitters.removeAll(deadEmitters);
+        System.out.println("정리된 오래된 연결 수: " + deadEmitters.size());
+    }
+    
+    /**
+     * Emitter가 닫혔는지 확인 (간접적으로)
+     */
+    private boolean isEmitterClosed(SseEmitter emitter) {
+        try {
+            // 매우 작은 데이터를 보내서 연결 상태 확인
+            emitter.send(SseEmitter.event()
+                .name("check")
+                .data(""));
+            return false;
+        } catch (Exception e) {
+            return true;
+        }
     }
     
     /**

@@ -57,8 +57,12 @@ public class ScheduleController {
         Schedule savedSchedule = scheduleRepository.save(schedule);
         SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
         
-        // SSE 이벤트 브로드캐스트
-        eventController.broadcastUpdate("schedule-created", "스케줄이 추가되었습니다: " + schedule.getId() + "-" + schedule.getRaidName());
+        // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+        try {
+            eventController.broadcastUpdate("schedule-created", "스케줄이 추가되었습니다: " + schedule.getId() + "-" + schedule.getRaidName());
+        } catch (Exception e) {
+            System.err.println("SSE 브로드캐스트 실패 (스케줄 저장은 성공): " + e.getMessage());
+        }
         
         return ResponseEntity.ok(savedSchedule);
     }
@@ -105,8 +109,12 @@ public class ScheduleController {
             
             SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
             
-            // SSE 이벤트 브로드캐스트
-            eventController.broadcastUpdate("schedule-batch-saved", "스케줄이 일괄 저장되었습니다.");
+            // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+            try {
+                eventController.broadcastUpdate("schedule-batch-saved", "스케줄이 일괄 저장되었습니다.");
+            } catch (Exception e) {
+                System.err.println("SSE 브로드캐스트 실패 (스케줄 저장은 성공): " + e.getMessage());
+            }
             
             return ResponseEntity.ok().body("{\"message\": \"스케줄이 성공적으로 저장되었습니다.\"}");
         } catch (Exception e) {
@@ -125,8 +133,12 @@ public class ScheduleController {
             scheduleRepository.updateIsFinishByIdAndRaidName(partyName, raidName, finishStatus);
             SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
             
-            // SSE 이벤트 브로드캐스트
-            eventController.broadcastUpdate("schedule-finish-updated", partyName + "-" + raidName + " 완료 상태가 변경되었습니다.");
+            // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+            try {
+                eventController.broadcastUpdate("schedule-finish-updated", partyName + "-" + raidName + " 완료 상태가 변경되었습니다.");
+            } catch (Exception e) {
+                System.err.println("SSE 브로드캐스트 실패 (완료 상태 업데이트는 성공): " + e.getMessage());
+            }
             
             return ResponseEntity.ok().body("{\"message\": \"완료 상태가 업데이트되었습니다.\"}");
         } catch (Exception e) {
@@ -144,8 +156,12 @@ public class ScheduleController {
                 scheduleRepository.deleteAll(schedules);
                 SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
                 
-                // SSE 이벤트 브로드캐스트
-                eventController.broadcastUpdate("schedule-deleted", partyName + "-" + raidName + " 스케줄이 삭제되었습니다.");
+                // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+                try {
+                    eventController.broadcastUpdate("schedule-deleted", partyName + "-" + raidName + " 스케줄이 삭제되었습니다.");
+                } catch (Exception e) {
+                    System.err.println("SSE 브로드캐스트 실패 (스케줄 삭제는 성공): " + e.getMessage());
+                }
                 
                 return ResponseEntity.ok().body("{\"message\": \"스케줄이 삭제되었습니다.\"}");
             } else {

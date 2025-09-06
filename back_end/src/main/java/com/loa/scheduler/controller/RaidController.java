@@ -42,8 +42,12 @@ public class RaidController {
         
         Raid savedRaid = raidRepository.save(raid);
         
-        // SSE 이벤트 브로드캐스트
-        eventController.broadcastUpdate("raid-created", "레이드 '" + raid.getName() + "'이 추가되었습니다.");
+        // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+        try {
+            eventController.broadcastUpdate("raid-created", "레이드 '" + raid.getName() + "'이 추가되었습니다.");
+        } catch (Exception e) {
+            System.err.println("SSE 브로드캐스트 실패 (레이드 생성은 성공): " + e.getMessage());
+        }
         
         return ResponseEntity.ok(savedRaid);
     }
@@ -58,8 +62,12 @@ public class RaidController {
             raid.setSeq(raidDetails.getSeq());
             Raid updatedRaid = raidRepository.save(raid);
             
-            // SSE 이벤트 브로드캐스트
-            eventController.broadcastUpdate("raid-updated", "레이드 '" + name + "'이 수정되었습니다.");
+            // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+            try {
+                eventController.broadcastUpdate("raid-updated", "레이드 '" + name + "'이 수정되었습니다.");
+            } catch (Exception e) {
+                System.err.println("SSE 브로드캐스트 실패 (레이드 수정은 성공): " + e.getMessage());
+            }
             
             return ResponseEntity.ok(updatedRaid);
         }
@@ -72,8 +80,12 @@ public class RaidController {
         if (raidRepository.existsById(name)) {
             raidRepository.deleteById(name);
             
-            // SSE 이벤트 브로드캐스트
-            eventController.broadcastUpdate("raid-deleted", "레이드 '" + name + "'이 삭제되었습니다.");
+            // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+            try {
+                eventController.broadcastUpdate("raid-deleted", "레이드 '" + name + "'이 삭제되었습니다.");
+            } catch (Exception e) {
+                System.err.println("SSE 브로드캐스트 실패 (레이드 삭제는 성공): " + e.getMessage());
+            }
             
             return ResponseEntity.ok().build();
         }
@@ -97,8 +109,12 @@ public class RaidController {
             List<Raid> updatedRaids = raidRepository.findAll();
             updatedRaids.sort((a, b) -> Long.compare(a.getSeq(), b.getSeq()));
             
-            // SSE 이벤트 브로드캐스트
-            eventController.broadcastUpdate("raid-order-updated", "레이드 순서가 변경되었습니다.");
+            // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+            try {
+                eventController.broadcastUpdate("raid-order-updated", "레이드 순서가 변경되었습니다.");
+            } catch (Exception e) {
+                System.err.println("SSE 브로드캐스트 실패 (레이드 순서 변경은 성공): " + e.getMessage());
+            }
             
             return ResponseEntity.ok(updatedRaids);
         } catch (Exception e) {

@@ -55,8 +55,12 @@ public class CharactorsController {
         Charactors savedCharacter = CharactorsRepository.save(character);
         SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
         
-        // SSE 이벤트 브로드캐스트
-        eventController.broadcastUpdate("character-created", "캐릭터 '" + character.getName() + "'이 추가되었습니다.");
+        // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+        try {
+            eventController.broadcastUpdate("character-created", "캐릭터 '" + character.getName() + "'이 추가되었습니다.");
+        } catch (Exception e) {
+            System.err.println("SSE 브로드캐스트 실패 (캐릭터 생성은 성공): " + e.getMessage());
+        }
         
         return ResponseEntity.ok(savedCharacter);
     }
@@ -74,8 +78,12 @@ public class CharactorsController {
             Charactors updatedCharacter = CharactorsRepository.save(character);
             SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
             
-            // SSE 이벤트 브로드캐스트
-            eventController.broadcastUpdate("character-updated", "캐릭터 '" + name + "'이 수정되었습니다.");
+            // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+            try {
+                eventController.broadcastUpdate("character-updated", "캐릭터 '" + name + "'이 수정되었습니다.");
+            } catch (Exception e) {
+                System.err.println("SSE 브로드캐스트 실패 (캐릭터 수정은 성공): " + e.getMessage());
+            }
             
             return ResponseEntity.ok(updatedCharacter);
         }
@@ -89,8 +97,12 @@ public class CharactorsController {
             CharactorsRepository.deleteById(name);
             SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
             
-            // SSE 이벤트 브로드캐스트
-            eventController.broadcastUpdate("character-deleted", "캐릭터 '" + name + "'이 삭제되었습니다.");
+            // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+            try {
+                eventController.broadcastUpdate("character-deleted", "캐릭터 '" + name + "'이 삭제되었습니다.");
+            } catch (Exception e) {
+                System.err.println("SSE 브로드캐스트 실패 (캐릭터 삭제는 성공): " + e.getMessage());
+            }
             
             return ResponseEntity.ok().build();
         }
@@ -114,8 +126,12 @@ public class CharactorsController {
             List<Charactors> savedCharacters = CharactorsRepository.saveAll(characters);
             SystemController.updateTimestamp(); // 자동갱신을 위한 timestamp 업데이트
             
-            // SSE 이벤트 브로드캐스트
-            eventController.broadcastUpdate("character-batch-saved", "캐릭터 목록이 일괄 저장되었습니다.");
+            // SSE 이벤트 브로드캐스트 (오류 발생해도 응답에는 영향 없음)
+            try {
+                eventController.broadcastUpdate("character-batch-saved", "캐릭터 목록이 일괄 저장되었습니다.");
+            } catch (Exception e) {
+                System.err.println("SSE 브로드캐스트 실패 (캐릭터 일괄 저장은 성공): " + e.getMessage());
+            }
             
             return ResponseEntity.ok(savedCharacters);
         } catch (Exception e) {
