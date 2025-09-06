@@ -7,6 +7,31 @@ export function useAutoRefresh(loadDataFn) {
   const isSSEConnected = ref(false)
   let eventSource = null
   
+  // 즉시 연결 정리 로직 - 페이지 언로드 시 SSE 연결 즉시 종료
+  const handleBeforeUnload = () => {
+    if (eventSource) {
+      console.log('🔌 페이지 종료로 인한 SSE 연결 즉시 종료')
+      eventSource.close()
+      eventSource = null
+      isSSEConnected.value = false
+    }
+  }
+  
+  // 즉시 연결 정리 로직 - 페이지 가시성 변경 시 처리
+  const handleVisibilityChange = () => {
+    if (document.hidden) {
+      console.log('📱 페이지가 백그라운드로 이동')
+      // 모바일에서 백그라운드 시 연결 유지하되 로그만 출력
+    } else {
+      console.log('📱 페이지가 포그라운드로 복귀')
+      // SSE 연결이 끊어졌다면 재연결 시도
+      if (!isSSEConnected.value && !eventSource) {
+        console.log('🔄 포그라운드 복귀 시 SSE 재연결 시도')
+        setupSSE()
+      }
+    }
+  }
+  
   // SSE 연결 설정
   const setupSSE = () => {
     try {
@@ -24,6 +49,14 @@ export function useAutoRefresh(loadDataFn) {
       eventSource.onmessage = (event) => {
         console.log('📨 SSE 메시지 수신:', event.data)
       }
+      
+      // 하트비트 메커니즘 - 서버 heartbeat 응답 처리
+      eventSource.addEventListener('heartbeat', (event) => {
+        // 하트비트 메커니즘 - 서버 ping에 대한 pong 응답
+        console.log('💓 하트비트 수신:', event.data)
+        // 연결이 살아있음을 확인
+        isSSEConnected.value = true
+      })
       
       // 연결 성공 이벤트
       eventSource.addEventListener('connected', (event) => {
@@ -152,9 +185,15 @@ export function useAutoRefresh(loadDataFn) {
         console.error('❌ SSE 연결 에러:', error)
         isSSEConnected.value = false
         
+        // 즉시 연결 정리 로직 - 에러 발생 시 기존 연결 정리
+        if (eventSource) {
+          eventSource.close()
+          eventSource = null
+        }
+        
         // 연결이 끊어지면 잠시 후 재연결 시도
         setTimeout(() => {
-          if (eventSource && eventSource.readyState === EventSource.CLOSED) {
+          if (!eventSource && !document.hidden) { // 페이지가 보이는 상태에서만 재연결
             console.log('🔄 SSE 재연결 시도...')
             setupSSE()
           }
@@ -237,15 +276,28 @@ export function useAutoRefresh(loadDataFn) {
   // 이벤트 리스너 등록 및 SSE 시작
   onMounted(() => {
     window.addEventListener('focus', handleFocus)
+    
+    // 즉시 연결 정리 로직 - 페이지 언로드 이벤트 등록
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('unload', handleBeforeUnload)
+    
+    // 즉시 연결 정리 로직 - 페이지 가시성 변경 이벤트 등록
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
     setupSSE()
   })
   
   onUnmounted(() => {
     window.removeEventListener('focus', handleFocus)
     
+    // 즉시 연결 정리 로직 - 이벤트 리스너 정리
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+    window.removeEventListener('unload', handleBeforeUnload)
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+    
     // SSE 연결 정리
     if (eventSource) {
-      console.log('🔌 SSE 연결 종료')
+      console.log('🔌 컴포넌트 언마운트로 인한 SSE 연결 종료')
       eventSource.close()
       eventSource = null
     }
