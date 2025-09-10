@@ -20,7 +20,11 @@ public class WeeklyResetTask {
     public void resetSchedulesAndUserSchedules() {
         // 1. raid_schedule의 is_finish를 N으로 일괄 변경
         scheduleRepository.updateAllIsFinishToN();
-        // 2. user_schedule 전체 삭제
-        userScheduleRepository.deleteAll();
+        
+        // 2. user_schedule 주간 데이터 이동
+        // 2-1. 1주차 데이터 삭제
+        userScheduleRepository.deleteWeek1Data();
+        // 2-2. 2주차 데이터를 1주차로 이동
+        userScheduleRepository.moveWeek2ToWeek1();
     }
 }
