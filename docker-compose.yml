@@ -14,8 +14,8 @@ services:
       MYSQL_PASSWORD: qlso
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
-    ports:
-      - "19012:3306"
+    expose:
+      - "3306"
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -46,7 +46,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: qlso
       SERVER_PORT: 19013
     ports:
-      - "0.0.0.0:19013:19013"
+      - "127.0.0.1:19013:19013"
     networks:
       - loa-network
     # Spring Boot 헬스체크 (권장)
