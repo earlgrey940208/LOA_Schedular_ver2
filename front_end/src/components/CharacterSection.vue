@@ -41,7 +41,7 @@ const props = defineProps({
 const emit = defineEmits(['add-character', 'delete-character', 'update:newCharacters', 'update:deletedCharacters'])
 
 // 캐릭터 드래그 시작 디버깅
-const handleCharacterDragStart = (character) => {
+const handleCharacterDragStart = (event, character) => {
   return props.onCharacterDragStart(character)
 }
 
@@ -177,7 +177,7 @@ defineExpose({
                     'drag-target': true
                   }"
                   :draggable="!isCharacterMaxed(character.name)"
-                  @dragstart="!isCharacterMaxed(character.name) ? handleCharacterDragStart(character) : onCharacterOrderDragStart($event, character, userName, index)"
+                  @dragstart="!isCharacterMaxed(character.name) ? handleCharacterDragStart($event, character) : onCharacterOrderDragStart($event, character, userName, index)"
                   @dragover="onDragOver"
                   @drop="onCharacterOrderDrop($event, userName, index, characters)"
                   @dragenter="onDragOver"
