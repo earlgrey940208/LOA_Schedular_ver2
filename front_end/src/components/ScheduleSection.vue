@@ -36,6 +36,15 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  // Phase 3: 비활성화 상태 props 추가
+  disabledCharacters: {
+    type: Object,
+    required: true
+  },
+  disabledCells: {
+    type: Object,
+    required: true
+  },
   getScheduledCharacters: {
     type: Function,
     required: true
@@ -103,8 +112,47 @@ const getScheduledCharacters = (party, raid) => {
 
 // 셀 우클릭 헬퍼 함수 - 셀 배경에서 우클릭 시 완료 토글
 const onCellRightClick = (event, party, raid) => {
-  // 셀 배경을 클릭한 경우 완료 상태 토글
+  // 캐릭터 요소에서 온 이벤트는 무시
+  if (event.target.classList.contains('scheduled-character')) {
+    console.log('캐릭터에서 온 이벤트 - 셀 우클릭 무시')
+    return
+  }
+  
+  // 셀 배경을 클릭한 경우만 완료 상태 토글
+  console.log('셀 배경 우클릭 - 완료 상태 토글')
   props.onRightClick(event, party, raid, null)
+}
+
+// Phase 3: 캐릭터 우클릭 핸들러 (기존 기능과 완전 독립)
+const onCharacterRightClick = (event, characterName, party, raid) => {
+  event.preventDefault()
+  event.stopPropagation() // 셀 우클릭 이벤트와 분리
+  event.stopImmediatePropagation() // 추가로 즉시 전파 중단
+  
+  // 위치별 고유 키 생성 (party-raid-characterName)
+  const uniqueKey = `${party}-${raid}-${characterName}`
+  
+  // 해당 위치의 캐릭터만 비활성화 상태 토글
+  if (props.disabledCharacters.has(uniqueKey)) {
+    props.disabledCharacters.delete(uniqueKey)
+  } else {
+    props.disabledCharacters.add(uniqueKey)
+  }
+  
+  console.log('캐릭터 우클릭:', uniqueKey, '비활성화:', props.disabledCharacters.has(uniqueKey))
+  return false // 이벤트 완전 차단
+}
+
+// Phase 4: 셀 상태 체크 함수
+const isCellAllDisabled = (party, raid) => {
+  const characters = getScheduledCharacters(party, raid)
+  if (characters.length === 0) return false // 빈 셀은 비활성화 안함
+  
+  // 셀의 모든 캐릭터가 비활성화되었는지 체크
+  return characters.every(character => {
+    const uniqueKey = `${party}-${raid}-${character.name}`
+    return props.disabledCharacters.has(uniqueKey)
+  })
 }
 
 // 레이드 관리 함수들
@@ -346,7 +394,8 @@ const onPartyHover = (partyIndex, isEnter) => {
               :data-party-index="index"
               :class="{ 
                 'finished': isScheduleFinished(party, raid.name || raid),
-                'readonly': isScheduleFinished(party, raid.name || raid)
+                'readonly': isScheduleFinished(party, raid.name || raid),
+                'cell-disabled': isCellAllDisabled(party, raid.name || raid)
               }"
               @dragover="!isScheduleFinished(party, raid.name || raid) ? onDragOver($event) : null"
               @drop="onScheduleDrop($event, party, raid.name || raid)"
@@ -358,8 +407,12 @@ const onPartyHover = (partyIndex, isEnter) => {
                   :key="character.scheduleId"
                   class="scheduled-character"
                   :style="{ backgroundColor: userColors[character.userId] }"
-                  :class="{ supporter: character.isSupporter }"
+                  :class="{ 
+                    supporter: character.isSupporter,
+                    'character-disabled': disabledCharacters.has(`${party}-${raid.name || raid}-${character.name}`)
+                  }"
                   @dblclick="onCharacterDoubleClick($event, party, raid.name || raid, index)"
+                  @contextmenu="onCharacterRightClick($event, character.name, party, raid.name || raid)"
                 >
                   {{ character.name }}
                 </span>
@@ -593,5 +646,16 @@ const onPartyHover = (partyIndex, isEnter) => {
 .draggable-row {
   cursor: move;
   user-select: none;
+}
+
+/* Phase 2: 캐릭터/셀 비활성화 스타일 (기존 기능에 영향 없음) */
+.character-disabled {
+  opacity: 0.5 !important;
+  filter: grayscale(100%) !important;
+  cursor: not-allowed;
+}
+
+.cell-disabled {
+  background-color: #e9ecef !important;
 }
 </style>
