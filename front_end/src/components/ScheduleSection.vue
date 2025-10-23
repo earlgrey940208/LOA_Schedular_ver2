@@ -45,6 +45,10 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  saveRaidOrderChange: {
+    type: Function,
+    required: true
+  },
   getScheduledCharacters: {
     type: Function,
     required: true
@@ -183,6 +187,9 @@ const addRaid = (raidName) => {
     const updatedNewRaids = [...props.newRaids, newRaid]
     emit('update:newRaids', updatedNewRaids)
     
+    // 자동저장 트리거
+    props.saveRaidOrderChange(updatedRaids)
+    
   } else {
     console.warn('레이드 추가 실패 - 이미 존재하거나 빈 이름:', raidName)
   }
@@ -221,6 +228,9 @@ const deleteRaid = (raidName) => {
     
     // 스케줄 변경사항 추적
     props.markScheduleAsChanged()
+    
+    // 자동저장 트리거
+    props.saveRaidOrderChange(updatedRaids)
     
   } else {
     console.warn('삭제할 레이드를 찾을 수 없음:', raidName)

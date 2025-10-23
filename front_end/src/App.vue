@@ -142,6 +142,7 @@ onMounted(async () => {
         :hasScheduleChanges="hasScheduleChanges"
         :disabledCharacters="disabledCharacters"
         :disabledCells="disabledCells"
+        :saveRaidOrderChange="saveRaidOrderChange"
         :getScheduledCharacters="getScheduledCharactersWrapper"
         :getCharacterRaids="getCharacterRaidsWrapper"
         :isScheduleFinished="isScheduleFinished"
