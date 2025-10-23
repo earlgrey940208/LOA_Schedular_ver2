@@ -113,6 +113,10 @@ const {
 // 저장 함수 - CharacterSection에 캐릭터 저장을 위임하는 방식
 const characterSectionRef = ref(null)
 
+// Phase 1: 캐릭터/셀 비활성화 상태 관리 (기존 기능에 영향 없음)
+const disabledCharacters = ref(new Set()) // 비활성화된 캐릭터들 (characterName)
+const disabledCells = ref(new Set())      // 비활성화된 셀들 (party-raid 형식)
+
 // 컴포넌트가 마운트될 때 데이터 가져오기
 onMounted(async () => {
   await loadData()
@@ -136,6 +140,9 @@ onMounted(async () => {
         :deletedRaids="deletedRaids"
         :raidOrderChanges="raidOrderChanges"
         :hasScheduleChanges="hasScheduleChanges"
+        :disabledCharacters="disabledCharacters"
+        :disabledCells="disabledCells"
+        :saveRaidOrderChange="saveRaidOrderChange"
         :getScheduledCharacters="getScheduledCharactersWrapper"
         :getCharacterRaids="getCharacterRaidsWrapper"
         :isScheduleFinished="isScheduleFinished"
